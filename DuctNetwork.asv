@@ -30,7 +30,7 @@ classdef DuctNetwork < handle
         s_m; % array of size s by 1, s_m(i)=0 means no need to identify S(i), s_m(i)>0 is the multiplicity of this parameter that need to be identified
         s_MultiS; % cell array of size s by 1, containing values of multiplicities of each parameter in row vectors, Use [s_MultiS{:}]' to obtain all in one column vector
         
-        n_trail;
+        n_fail_derivative;
     end
     
     methods
@@ -55,8 +55,10 @@ classdef DuctNetwork < handle
             obj.s_m = zeros(0,1);
             obj.s_MultiS = cell(0,1);
             
-            obj.n_trail = 0;
+            obj.n_fail_derivative = 0;
         end
+        
+        branch = ParamDependency(para_idx); % this functions querry the dependent branches for given parameter index.
 
         function Branch_Idx = AddBranch(obj,FromNode,ToNode,varargin)
             [~, b_Curr]=size(obj.A);
@@ -283,20 +285,20 @@ classdef DuctNetwork < handle
                 S_value(cellfun(@(Str) find(strcmp(Str,obj.s_ParamDescription)),Param_Description)) = Param_Value;
             end
             
-%             X0 = rand(obj.t,1);
+            X0 = rand(obj.t,1);
             options = optimoptions(@lsqnonlin,'Display','none',...
                 'Algorithm','trust-region-reflective',...
                 'FunctionTolerance',1e-6,'StepTolerance',1e-6,...
                 'MaxIterations',obj.t*5,...
                 'SpecifyObjectiveGradient',true,'CheckGradients',false,...
                 'FiniteDifferenceType','forward','FiniteDifferenceStepSize',1e-10);
-%             [X,~,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
-            exitflag = -1;
+            [X,~,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
             while exitflag<=0
-                obj.n_trail = obj.n_trail+1;
+                obj.n_tail_derivative = obj.n_fail_derivative+1;
                 X0 = rand(obj.t,1);
-                [X,~,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
+                %disp('Change to numerical Jacobian!')
                 %options = optimoptions(options,'SpecifyObjectiveGradient',false);
+                [X,~,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
             end
             dP=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,obj.U*X,S_value),(1:obj.b)','UniformOutput',false);
             dP=cell2mat(dP);
