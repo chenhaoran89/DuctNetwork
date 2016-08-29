@@ -39,9 +39,9 @@ duct.AddFitting(9,'CircularDarcyWeisbach',[2.1+rand,0.2]);
 duct.AddFitting([1,-2,-3],'CircularTJunction',[0.2,0.2,0.15]);
 duct.AddFitting([1,2,3],'CircularTJunction',[0.3,0.3,0.2]);
 %%
-N=100;
+N=2000;
 for ii=1:N
     disp(ii)
-    [X,Q,P]=duct.Sim();
+    duct.Sim();
 end
-SuccessRatio=2-duct.n_trail/N;
+SuccessRatio=2-duct.n_trail/N
