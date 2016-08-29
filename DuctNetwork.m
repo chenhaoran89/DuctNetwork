@@ -94,7 +94,7 @@ classdef DuctNetwork < handle
             if isa(Model,'function_handle')
                 if Model('Is_Junction')
                     % separate the junction into three/four junction branches, and add each of them separately, parameters are shared by all of them.
-                    CenterNode=find(arrayfun(@(i)isempty(setdiff(find(obj.A(i,:)),abs(Branch))),1:obj.n),1);
+                    CenterNode=find(arrayfun(@(i)isempty(setxor(find(obj.A(i,:)),abs(Branch))),1:obj.n),1);
                     if isempty(CenterNode)
                         disp('no such junction exist, fail to create junction'); return
                     end    
@@ -665,14 +665,14 @@ classdef DuctNetwork < handle
                     case 'Pdrop'
                         q = reshape(varargin{1},1,[]);
                         s = reshape(varargin{2},1,[]);
-                        [dP,dPdQ,dPdS] = DataInitiation(q,s);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
                         varargout{ii} = dP;
                     case 'dPdQ'
                         varargout{ii} = dPdQ;
                     case 'dPdS'
                         varargout{ii} = dPdS;
                     case 'Model_Description'
-                        varargout{ii}='Main of Circular T-Junction using ED5-3,ED5-4,SD5-18,SD5-9';
+                        varargout{ii}='Horizontal part of Circular T-Junction using ED5-3,ED5-4,SD5-18,SD5-9';
                     case 'Is_Junction'
                         varargout{ii}=false;
                     case 'Get_Branches'
@@ -689,7 +689,7 @@ classdef DuctNetwork < handle
                         varargout{ii}=[0,0,0,0,0];
                 end
             end
-            function [dP,dPdQ,dPdS]=DataInitiation(q,s)
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
                 dir = sign(q);
                 switch (q>0)*[4;2;1]
                     case 1 %[0,0,1]*[4;2;1], - - +, bullhead diverge SD5-18, use Cb
@@ -731,14 +731,14 @@ classdef DuctNetwork < handle
                     case 'Pdrop'
                         q = reshape(varargin{1},1,[]);
                         s = reshape(varargin{2},1,[]);
-                        [dP,dPdQ,dPdS] = DataInitiation(q,s);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
                         varargout{ii} = dP;
                     case 'dPdQ'
                         varargout{ii} = dPdQ;
                     case 'dPdS'
                         varargout{ii} = dPdS;
                     case 'Model_Description'
-                        varargout{ii}='Branch of Circular T-Junction using ED5-3,ED5-4,SD5-18,SD5-9';
+                        varargout{ii}='Vertical part of Circular T-Junction using ED5-3,ED5-4,SD5-18,SD5-9';
                     case 'Is_Junction'
                         varargout{ii}=false;
                     case 'Get_Branches'
@@ -755,7 +755,7 @@ classdef DuctNetwork < handle
                         varargout{ii}=[0,0,0,0,0];
                 end
             end
-            function [dP,dPdQ,dPdS]=DataInitiation(q,s)
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
                 dir = sign(q);
                 switch (q>0)*[4;2;1]
                     case 1 %[0,0,1]*[4;2;1], - - +, T diverge SD5-9 at downstream side, use Cb
