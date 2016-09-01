@@ -918,6 +918,69 @@ classdef DuctNetwork < handle
             dfds = g*dCfdZ*dZds + Cf*dgds;
         end
         
+        function [f,dfdq,dfds] = Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds,Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q,s)
+            % Z = ZExp(q,s)
+            % C = Interpolation(GridVector,InterpTable,Z)
+            % g = gExp(q,s)
+            % f = g*C;
+            % dfdq = g*dCdZ*dZdq + C*dgdq;
+            % dfds = g*dCdZ*dZds + C*dgds;
+            Coeff_Interpolant1 = griddedInterpolant(GridVector1,InterpTable1,'linear','nearest');
+            Z1 = reshape(Z1Exp(q,s),1,[]);
+            NZ1 = length(Z1);
+            Cf1 = Coeff_Interpolant1(Z1);
+            StepSize1 = cell(1,NZ1);IndexInTable1 = cell(1,NZ1);
+            for ii = 1:NZ1
+                if Z1(ii)>GridVector1{ii}(end)
+                    IndexInTable1{ii}=length(GridVector1{ii})*[1;1];
+                    StepSize1{ii}=1;
+                elseif Z1(ii)<=GridVector1{ii}(1)
+                    IndexInTable1{ii}=[1;1];
+                    StepSize1{ii}=1;
+                else
+                    tmp=find(Z1(ii)>GridVector1{ii},1,'last');
+                    IndexInTable1{ii}=[tmp;tmp+1];
+                    StepSize1{ii}=GridVector1{ii}(tmp+1)-GridVector1{ii}(tmp);
+                end
+            end
+            cell_Grad1 = cell(1,NZ1);
+            [cell_Grad1{:}] = gradient(InterpTable1(IndexInTable1{:}),StepSize1{:});
+            dCf1dZ1 = cellfun(@(M)M(1),cell_Grad1,'UniformOutput',true);
+            dZ1dq = dZ1dq(q,s);
+            dZ1ds = dZ1ds(q,s);
+            
+            Coeff_Interpolant2 = griddedInterpolant(GridVector2,InterpTable2,'linear','nearest');
+            Z2 = reshape(Z2Exp(q,s),1,[]);
+            NZ2 = length(Z2);
+            Cf2 = Coeff_Interpolant2(Z2);
+            StepSize2 = cell(1,NZ2);IndexInTable2 = cell(1,NZ2);
+            for ii = 1:NZ2
+                if Z2(ii)>GridVector2{ii}(end)
+                    IndexInTable2{ii}=length(GridVector2{ii})*[1;1];
+                    StepSize2{ii}=1;
+                elseif Z2(ii)<=GridVector2{ii}(1)
+                    IndexInTable2{ii}=[1;1];
+                    StepSize2{ii}=1;
+                else
+                    tmp=find(Z2(ii)>GridVector2{ii},1,'last');
+                    IndexInTable2{ii}=[tmp;tmp+1];
+                    StepSize2{ii}=GridVector2{ii}(tmp+1)-GridVector2{ii}(tmp);
+                end
+            end
+            cell_Grad2 = cell(1,NZ2);
+            [cell_Grad2{:}] = gradient(InterpTable2(IndexInTable2{:}),StepSize2{:});
+            dCf2dZ2 = cellfun(@(M)M(1),cell_Grad2,'UniformOutput',true);
+            dZ2dq = dZ2dq(q,s);
+            dZ2ds = dZ2ds(q,s);
+            
+            g = gExp(q,s);
+            dgdq = dgdq(q,s);
+            dgds = dgds(q,s);
+            f = g*Cf1*Cf2;
+            dfdq = g*Cf2*dCf1dZ1*dZ1dq + g*Cf1*dCf2dZ2*dZ2dq + Cf1*Cf2*dgdq;
+            dfds = g*Cf2*dCf1dZ1*dZ1ds + g*Cf1*dCf2dZ2*dZ2ds + Cf1*Cf2*dgds;
+        end
+        
         function [f,dfdq,dfds] = Interp_Gradient2(GridVector, InterpTable, ZExp, dZdq, dZds, gExp, dgdq, dgds, q,s)
             % Z = ZExp(q,s)
             % C = Interpolation(GridVector,InterpTable,Z)
