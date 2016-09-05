@@ -1,5 +1,5 @@
 duct = DuctNetwork();
-duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Dynamic Viscosity(m^2/s)'},[1.204,0.15,15.11e-6]);
+duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'},[1.204,0.15,15.11e-6]);
 duct.AddBranch(0,1);
 duct.AddFitting(1,'FanQuadratic',[150*(1+rand),0.3]);
 duct.AddFitting(1,'DuctQuadratic',1000*[2+rand]);
@@ -36,10 +36,10 @@ duct.AddBranch('Node 2','GND');
 duct.AddFitting(9,'DuctQuadratic',1000*[2+rand]);
 duct.AddFitting(9,'CircularDarcyWeisbach',[2.2+rand,0.2]);
 duct.AddFitting(9,'CircularDarcyWeisbach',[2.1+rand,0.2]);
-duct.AddFitting([1,-2,-3],'CircularTJunction',[0.2,0.2,0.15]);
 duct.AddFitting([1,2,3],'CircularTJunction',[0.3,0.3,0.2]);
+
 %%
-N=2000;
+N=1;
 for ii=1:N
     disp(ii)
     duct.Sim();

@@ -6,7 +6,7 @@ classdef DuctNetwork < handle
         n_NodeDescription; % cell array of size n by 1, text description on each node
         P; % array of size n by 1, pressure vector on each node, Pa
         b; % number of branches in the network
-        b_BranchDescription; % cell array of size b by 1, text description on each branch
+        b_FittingDescription; % cell array of size b by 1, text description on each branch
         Q; % array of size b by 1, flow rate vector on each branch, m^3/s
         A; % Associate matrix of size n by b
         % A(i,j)==1 means branch j leaves node i
@@ -27,9 +27,18 @@ classdef DuctNetwork < handle
         s; % number of parameters in the model
         s_ParamDescription; % cell array of size b by 1, text description on each parameter
         S; % array of size s by 1, parameter vector for whole system
+        
+        %for identification
         s_m; % array of size s by 1, s_m(i)=0 means no need to identify S(i), s_m(i)>0 is the multiplicity of this parameter that need to be identified
         s_MultiS; % cell array of size s by 1, containing values of multiplicities of each parameter in row vectors, Use [s_MultiS{:}]' to obtain all in one column vector
-        
+        cnfg; % number of configurations in identification
+        cnfg_MultiSIdx; % cell array of size cnfg by 1, each is colume vector of index of identified parameter in [s_MultiS{:}]' 
+        ob; % number of sensors used in each procedure
+        ob_Uncertainty; % number array of sensor uncertainty, size ob by 1 
+        proc; % number of procedures in identification experiments
+        proc_ConfigIdx; %vector to indicate the configuration ID used in each procedure, size proc by 1;
+        proc_ObservationIdx; %cell array of Observation Position vector, size proc by 1 
+        proc_Measurements; % number array of Measurements record, size proc by ob 
         n_trail;
     end
     
@@ -39,7 +48,7 @@ classdef DuctNetwork < handle
             obj.n_NodeDescription = cell(0,1);
             obj.P = zeros(0,1);
             obj.b = 0;
-            obj.b_BranchDescription = cell(0,1);
+            obj.b_FittingDescription = cell(0,1);
             obj.Q = zeros(0,1);
             obj.A = zeros(0,0);
             obj.t = 0;
@@ -54,6 +63,13 @@ classdef DuctNetwork < handle
             obj.S = zeros(0,1);
             obj.s_m = zeros(0,1);
             obj.s_MultiS = cell(0,1);
+            obj.cnfg=0; 
+            obj.cnfg_MultiSIdx = cell(0,1);
+            obj.ob=0; 
+            obj.ob_Uncertainty = zeros(0,1);
+            obj.proc=0; 
+            obj.proc_ConfigIdx = zeros(0,1); 
+            obj.proc_Measurements = zeros(0,0);
             
             obj.n_trail = 0;
         end
@@ -71,7 +87,7 @@ classdef DuctNetwork < handle
             obj.b_dPdS{Branch_Idx,1}=cell(0,1);
             obj.b_Qidx{Branch_Idx,1}=cell(0,1);
             obj.b_Sidx{Branch_Idx,1}=cell(0,1);
-            obj.b_BranchDescription{Branch_Idx,1}=cell(0,1);
+            obj.b_FittingDescription{Branch_Idx,1}=cell(0,1);
             if nargin>3
                 obj.AddFitting(Branch_Idx,varargin{:});
             end
@@ -124,12 +140,12 @@ classdef DuctNetwork < handle
                     for ii = 1:length(branch_function_handle)
                         BranchList = Branch(branch_assignment{ii});
                         PrimaryBranch = abs(BranchList(1));
-                        obj.b_BranchDescription{PrimaryBranch} = [obj.b_BranchDescription{PrimaryBranch};{branch_function_handle{ii}('Model_Description')}];
-                        obj.b_Pdrop{PrimaryBranch} = [obj.b_Pdrop{PrimaryBranch};{@(q,s)branch_function_handle{ii}({'Pdrop','dPdQ','dPdS'},q,s)}];
-                        obj.b_dPdQ{PrimaryBranch} = [obj.b_dPdQ{PrimaryBranch};{@(q,s)branch_function_handle{ii}('dPdQ',q,s)}];
-                        obj.b_dPdS{PrimaryBranch} = [obj.b_dPdS{PrimaryBranch};{@(q,s)branch_function_handle{ii}('dPdS',q,s)}];
-                        obj.b_Qidx{PrimaryBranch} = [obj.b_Qidx{PrimaryBranch};{BranchList}];
-                        obj.b_Sidx{PrimaryBranch} = [obj.b_Sidx{PrimaryBranch};{Param_Idx(param_assignment{ii})}];
+                        obj.b_FittingDescription{PrimaryBranch}{end+1} = branch_function_handle{ii}('Model_Description');
+                        obj.b_Pdrop{PrimaryBranch}{end+1} = @(q,s)branch_function_handle{ii}({'Pdrop','dPdQ','dPdS'},q,s);
+                        obj.b_dPdQ{PrimaryBranch}{end+1} = @(q,s)branch_function_handle{ii}('dPdQ',q,s);
+                        obj.b_dPdS{PrimaryBranch}{end+1} = @(q,s)branch_function_handle{ii}('dPdS',q,s);
+                        obj.b_Qidx{PrimaryBranch}{end+1} = BranchList;
+                        obj.b_Sidx{PrimaryBranch}{end+1} = Param_Idx(param_assignment{ii});
                     end
                     obj.S(Param_Idx(1:length(Param))) = Param;
                     obj.s_m(Param_Idx) = Model('Is_Identified_Parameter');
@@ -157,12 +173,12 @@ classdef DuctNetwork < handle
                     
                     BranchList = Branch;
                     PrimaryBranch = abs(Branch(1));
-                    obj.b_BranchDescription{PrimaryBranch} = [obj.b_BranchDescription{PrimaryBranch};{Model('Model_Description')}];
-                    obj.b_Pdrop{PrimaryBranch} = [obj.b_Pdrop{PrimaryBranch};{@(q,s)Model({'Pdrop','dPdQ','dPdS'},q,s)}];
-                    obj.b_dPdQ{PrimaryBranch} = [obj.b_dPdQ{PrimaryBranch};{@(q,s)Model('dPdQ',q,s)}];
-                    obj.b_dPdS{PrimaryBranch} = [obj.b_dPdS{PrimaryBranch};{@(q,s)Model('dPdS',q,s)}];
-                    obj.b_Qidx{PrimaryBranch} = [obj.b_Qidx{PrimaryBranch};{BranchList}];
-                    obj.b_Sidx{PrimaryBranch} = [obj.b_Sidx{PrimaryBranch};{Param_Idx}];
+                    obj.b_FittingDescription{PrimaryBranch}{end+1} = Model('Model_Description');
+                    obj.b_Pdrop{PrimaryBranch}{end+1} = @(q,s)Model({'Pdrop','dPdQ','dPdS'},q,s);
+                    obj.b_dPdQ{PrimaryBranch}{end+1} = @(q,s)Model('dPdQ',q,s);
+                    obj.b_dPdS{PrimaryBranch}{end+1} = @(q,s)Model('dPdS',q,s);
+                    obj.b_Qidx{PrimaryBranch}{end+1} = BranchList;
+                    obj.b_Sidx{PrimaryBranch}{end+1} = Param_Idx;
                     
                     obj.S(Param_Idx(1:length(Param))) = Param;
                     obj.s_m(Param_Idx) = Model('Is_Identified_Parameter');
@@ -201,7 +217,7 @@ classdef DuctNetwork < handle
         end
             
         function varargout = BranchPressureDrop(obj,Branch_Idx,Q,S)  %[dP, dPdX, dPdS]
-            N = length(obj.b_BranchDescription{Branch_Idx});
+            N = length(obj.b_FittingDescription{Branch_Idx});
             dP = zeros(N,1);dPdQ = zeros(N,obj.b);dPdX = zeros(N,obj.t);dPdS = zeros(N,obj.s);
             if nargout>=3
                 for k = 1:N
@@ -225,7 +241,7 @@ classdef DuctNetwork < handle
 %                 Jac2 = [dPdQ(k,idx_Q), dPdS(k,idx_S)];
 %                 Jac1 = jacobianest(@(x)obj.b_Pdrop{Branch_Idx}{k}(x(1:length(idx_Q)),x(length(idx_Q)+1:end)),[Q(idx_Q);S(idx_S)]);
 %                 if any(abs(Jac2-Jac1)./Jac1>1e-8)
-%                     disp(['Jacobian Estimation Error in ',obj.b_BranchDescription{Branch_Idx}{k}]);
+%                     disp(['Jacobian Estimation Error in ',obj.b_FittingDescription{Branch_Idx}{k}]);
 %                     disp([find(abs(Jac2-Jac1)./Jac1>1e-6), max(abs(Jac2-Jac1)./Jac1), dir]);
 %                 end
                     dP(k) = dir(1)*dP(k);
@@ -262,6 +278,15 @@ classdef DuctNetwork < handle
                 dedS = obj.U'*dPdS;
                 varargout = cell(1,nargout);
                 varargout{1}=e; varargout{2}=dedX; varargout{3}=dedS;
+                if nargout>=4
+                    varargout{4}=dP;
+                    if nargout>=5
+                        varargout{5} = dPdX;
+                        if nargout>=6
+                            varargout{6} = dPdS;
+                        end
+                    end
+                end
             elseif nargout==2
                 [dP, dPdX]=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,obj.U*X,S),(1:obj.b)','UniformOutput',false);
                 dP = cell2mat(dP); dPdX = cell2mat(dPdX);
@@ -305,7 +330,7 @@ classdef DuctNetwork < handle
             obj.P = P;
         end
         
-        function varargout = Measurements(obj,ctrl_ParamIdx, proc_ctrl_ParamValue, ob_SensorType, ob_Uncertainty, proc_ob_SensorPosition)
+        function proc_ob_Measurements = Measurements(obj,ctrl_ParamIdx, proc_ctrl_ParamValue, ob_SensorType, ob_Uncertainty, proc_ob_SensorPosition)
             % Input:
             % ctrl_ParamIdx is parameterID vector of length ctrl. 
             % proc_in_ParamValue is parameter value matrix of size proc by ctrl.  
@@ -313,8 +338,7 @@ classdef DuctNetwork < handle
             % ob_Uncertainty is the uncertainty of each sensor, vector of size ob, can be cell array containing function handles or numbers for Gaussian  
             % proc_ob_SensorPosition is sensor position in each step of experiment in matrix of size proc by ob 
             % Output
-            % nargout should be the same as number of sensors, ob
-            % varargout{ii} is columne vector of length proc recording the readings of each sensor. 
+            % proc_ob_Readings is matrix of size proc by ob recording the readings of each sensor. 
             
             [proc, ctrl] = size(proc_ctrl_ParamValue);
             ob = length(ob_SensorType);
@@ -325,19 +349,54 @@ classdef DuctNetwork < handle
                     ob_Uncertainty{ii} = @(x) x+randn()*ob_UncertaintyArray(ii);
                 end
             end
-            varargout  = cell(1,ob);
+            proc_ob_Measurements  = zeros(proc,ob);
             for ii = 1:proc
                 obj.Sim(proc_ctrl_ParamValue(ii,:),ctrl_ParamIdx);
                 for jj = 1:ob
                     switch ob_SensorType
                         case {'P','Pressure'}
-                            varargout{jj}(ii,1) = ob_Uncertainty{ii}(obj.P(proc_ob_SensorPosition(ii,jj)));
+                            proc_ob_Measurements(ii,jj) = ob_Uncertainty{ii}(obj.P(proc_ob_SensorPosition(ii,jj)));
                         case {'q','Flowrate'}
-                            varargout{jj}(ii,1) = ob_Uncertainty{ii}(obj.Q(proc_ob_SensorPosition(ii,jj)));
+                            proc_ob_Measurements(ii,jj) = ob_Uncertainty{ii}(obj.Q(proc_ob_SensorPosition(ii,jj)));
                     end
                 end
             end
         end
+        
+        function varargout = res_Identification(obj, Tot_r)
+            % Output: Tot_e is the residual of all identification equations, Tot_e = [cnfg_e{:};proc_e{:}]
+            %         cnfg_e is the residual of state equations for each configuration, number array of size t by cnfg (folded horizontally) 
+            %         proc_e is the residual of measurements in each procedure, number array of size ob by proc (folded horizontally) 
+            %         dTot_edTot_r
+            % Input: Tot_r is the all variables in identification, Tot_r = [cnfg_X(:);[s_MultiS{:}]']
+            %        cnfg_X is the internal states of each configuration, number matrix of size t by cnfg 
+            %        s_MultiS is all identified parameters packed in cell array of size s by 1 in which length of number array in each cell is s_m 
+            if nargout==2
+                cnfg_X = num2cell(Tot_r(1:obj.cnfg*obj.t),1)';
+                cnfg_S = repmat({obj.S},obj.cnfg,1);
+                IdentSIdx = obj.s_m>0;
+                for ii = 1:obj.cnfg
+                    cnfg_S{ii}(IdentSIdx)=Tot_r(obj.cnfg*obj.t+obj.cnfg_MultiSIdx{ii});
+                end
+                
+                [cnfg_e,cnfg_dedX,cnfg_dedS, cnfg_dP, cnfg_dPdX, cnfg_dPdS] = cellfun(@obj.res_StateEquation,cnfg_X,cnfg_S,'UniformOutput',false);
+                
+                cnfg_QP = cellfun(@(X,dP)[obj.U*X, (obj.A')\dP],cnfg_X,cnfg_dP,'UniformOutput',false);
+                cnfg_dQPdX = cellfun(@(dPdX)[obj.U;(obj.A')\dPdX],cnfg_dPdX,'UniformOutput',false);
+                cnfg_dQPdS = cellfun(@(dPdS)[zeros(obj.t,obj.s);(obj.A')\dPdS],cnfg_dPdS,'UniformOutput',false);
+                
+                proc_Z = cellfun(@(QP,ObIdx)QP(ObIdx,:),cnfg_QP(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
+                proc_dZdX = cellfun(@(dQPdX,ObIdx)dQPdX(ObIdx,:),cnfg_dQPdX(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
+                proc_dZdS = cellfun(@(dQPdS,ObIdx)dQPdS(ObIdx,:),cnfg_dQPdS(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
+                
+                proc_e = cellfun(@(Z,Measurement)(Z-Measurement)./obj.ob_Uncertainty,proc_Z,num2cell(obj.proc_Measurements',1)','UniformOutput',false);
+                
+                Tot_e = [cell2mat(cnfg_e);cell2mat(proc_e)];
+                varargout{1} = Tot_e;
+                varargout{2} = dTot_edTot_r;
+            end
+        end
+        
     end
     
     methods (Static = true)
@@ -389,10 +448,50 @@ classdef DuctNetwork < handle
                     case 'dPdS'
                         q = varargin{1};s = varargin{2};
                         if q<0
-                            varargout{ii} = [1,0];
+                            varargout{ii} = [-1,0];
                         else
                             varargout{ii} = [q^2/s(2)^2-1, -s(1)*2*q^2/s(2)^3];
                         end
+                    otherwise
+                        varargout{ii}=[];
+                end
+            end
+        end
+        
+        function varargout = PressureSource(query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Model_Description'
+                        varargout{ii}='Flow source with constant pressure';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.PressureSource};
+                    case 'Branch_Assignment'
+                        varargout{ii}={1};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Pressure(Pa)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[1];
+                    case 'Pdrop'
+                        s = varargin{2};
+                        varargout{ii} = -s;
+                    case 'dPdQ'
+                        varargout{ii} = 0;
+                    case 'dPdS'
+                        varargout{ii} = -1;
                     otherwise
                         varargout{ii}=[];
                 end
@@ -521,7 +620,7 @@ classdef DuctNetwork < handle
                     case 'Parameter_Assignment'
                         varargout{ii}={1:5};
                     case 'Parameter_Description'
-                        varargout{ii}={'Length(m)','Diameter(m)','Density(kg/m^3)','Roughness(mm)','Dynamic Viscosity(m^2/s)'};
+                        varargout{ii}={'Length(m)','Diameter(m)','Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'};
                     case 'Is_Shared_Parameter'
                         varargout{ii}=[false,false,true,true,true];
                     case 'Is_Identified_Parameter'
@@ -602,7 +701,7 @@ classdef DuctNetwork < handle
                     case 'Parameter_Assignment'
                         varargout{ii}={1:5};
                     case 'Parameter_Description'
-                        varargout{ii}={'Length(m)','Diameter(m)','Density(kg/m^3)','Roughness(mm)','Dynamic Viscosity(m^2/s)'};
+                        varargout{ii}={'Length(m)','Diameter(m)','Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'};
                     case 'Is_Shared_Parameter'
                         varargout{ii}=[false,false,true,true,true];
                     case 'Is_Identified_Parameter'
@@ -693,20 +792,20 @@ classdef DuctNetwork < handle
                 dir = sign(q);
                 switch (q>0)*[4;2;1]
                     case 1 %[0,0,1]*[4;2;1], - - +, bullhead diverge SD5-18, use Cb
-                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.Calc_SD5_18(abs(q([1,2,3])), s([1,2,3,4]),'b');
+                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.SD5_18(abs(q([1,2,3])), s([1,2,3,4]),'b');
                     case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-9 at downstream side, use Cs
-                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.Calc_SD5_9(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.SD5_9(abs(q([1,3,2])),s([1,3,2,4]),'s');
                     case 3 %[0,1,1]*[4;2;1], - + +, flow inward from the branch, T converge ED5-3 at downsteram side, no pressure drop
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
                     case 4 %[1,0,0]*[4;2;1], + - -, flow outward from the branch, T diverge SD5-9 at upstream side, no pressure drop
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
                     case 5 %[1,0,1]*[4;2;1], + - +, flow inward from the branch, T converge ED5-3 at upstream side, use Cs
-                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.Calc_ED5_3(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.ED5_3(abs(q([1,3,2])),s([1,3,2,4]),'s');
                     case 6 %[1,1,0]*[4;2;1], + + -, flow inward from the opposite main, bullhead converge ED5-4, use Cb
                         if s(1)>=s(2) % D1>D2, use Cb1
-                            [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.Calc_ED5_4(abs(q([1,2,3])), s([1,2,3,4]), 'b1');
+                            [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.ED5_4(abs(q([1,2,3])), s([1,2,3,4]), 'b1');
                         else % D1<D2, use Cb2
-                            [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.Calc_ED5_4(abs(q([2,1,3])), s([2,1,3,4]), 'b2');
+                            [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_4(abs(q([2,1,3])), s([2,1,3,4]), 'b2');
                         end
                     case 7 %[1,1,1]*[4;2;1], + + +, impossible
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
@@ -759,17 +858,17 @@ classdef DuctNetwork < handle
                 dir = sign(q);
                 switch (q>0)*[4;2;1]
                     case 1 %[0,0,1]*[4;2;1], - - +, T diverge SD5-9 at downstream side, use Cb
-                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.Calc_SD5_9(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.SD5_9(abs(q([2,1,3])),s([2,1,3,4]),'b');
                     case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-9 at downstream side, use Cb
-                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.Calc_SD5_9(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.SD5_9(abs(q([3,1,2])),s([3,1,2,4]),'b');
                     case 3 %[0,1,1]*[4;2;1], - + +, bullhead converge ED5-4 at downsteram side, no pressure drop
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
                     case 4 %[1,0,0]*[4;2;1], + - -, bullhead diverge SD5-18 at upstream side, no pressure drop
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
                     case 5 %[1,0,1]*[4;2;1], + - +, T converge ED5-3 at branch side, use Cb
-                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.Calc_ED5_3(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.ED5_3(abs(q([3,1,2])),s([3,1,2,4]),'b');
                     case 6 %[1,1,0]*[4;2;1], + + -, flow inward from the main 1, T converge ED5-3 at branch side, use Cb
-                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.Calc_ED5_3(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_3(abs(q([2,1,3])),s([2,1,3,4]),'b');
                     case 7 %[1,1,1]*[4;2;1], + + +, impossible
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
                     case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
@@ -778,39 +877,538 @@ classdef DuctNetwork < handle
                 dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
             end
         end
+        
+        function varargout = CircularY30Junction( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        varargout{ii}=0;
+                    case 'dPdQ'
+                        varargout{ii}=zeros(3,1);
+                    case 'dPdS'
+                        varargout{ii}=zeros(4,1);
+                    case 'Model_Description'
+                        varargout{ii}='Circular Y-30-Junction using ED5-1,ED5-4,SD5-3,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=true;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY30Junction_Horizontal,@DuctNetwork.CircularY30Junction_Horizontal,@DuctNetwork.CircularY30Junction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3];[2,1,3];[3,1,2]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={[1,2,3,4];[2,1,3,4];[3,1,2,4]};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Main 1 Diameter(m)','Main 2 Diameter(m)','Branch Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0];
+                end
+            end
+        end
+        
+        function varargout = CircularY30Junction_Horizontal( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Horizontal part of Circular Y-30-Junction using ED5-1,ED5-4,SD5-3,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY30Junction_Horizontal};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:4};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Main 1 Diameter(m)','Main 2 Diameter(m)','Branch Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, bullhead diverge SD5-18, use Cb
+                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.SD5_18(abs(q([1,2,3])), s([1,2,3,4]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-3 at downstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.SD5_3(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                    case 3 %[0,1,1]*[4;2;1], - + +, flow inward from the branch, T converge ED5-1 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, flow outward from the branch, T diverge SD5-3 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, flow inward from the branch, T converge ED5-1 at upstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.ED5_1(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                    case 6 %[1,1,0]*[4;2;1], + + -, flow inward from the opposite main, bullhead converge ED5-4, use Cb
+                        if s(1)>=s(2) % D1>D2, use Cb1
+                            [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.ED5_4(abs(q([1,2,3])), s([1,2,3,4]), 'b1');
+                        else % D1<D2, use Cb2
+                            [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_4(abs(q([2,1,3])), s([2,1,3,4]), 'b2');
+                        end
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
+        
+        function varargout = CircularY30Junction_Side( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Side branch of Circular Y-30-Junction using ED5-1,ED5-4,SD5-3,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY30Junction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:4};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Branch Diameter(m)','Main 1 Diameter(m)','Main 2 Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, T diverge SD5-3 at downstream side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.SD5_3(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-3 at downstream side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.SD5_3(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                    case 3 %[0,1,1]*[4;2;1], - + +, bullhead converge ED5-4 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, bullhead diverge SD5-18 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, T converge ED5-1 at branch side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.ED5_1(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                    case 6 %[1,1,0]*[4;2;1], + + -, T converge ED5-1 at branch side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_1(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
+        
+        function varargout = CircularY45Junction( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        varargout{ii}=0;
+                    case 'dPdQ'
+                        varargout{ii}=zeros(3,1);
+                    case 'dPdS'
+                        varargout{ii}=zeros(4,1);
+                    case 'Model_Description'
+                        varargout{ii}='Circular Y-45-Junction using ED5-1,ED5-4,SD5-3,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=true;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY45Junction_Horizontal,@DuctNetwork.CircularY45Junction_Horizontal,@DuctNetwork.CircularY45Junction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3];[2,1,3];[3,1,2]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={[1,2,3,4];[2,1,3,4];[3,1,2,4]};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Main 1 Diameter(m)','Main 2 Diameter(m)','Branch Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0];
+                end
+            end
+        end
+        
+        function varargout = CircularY45Junction_Horizontal( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Horizontal part of Circular Y-45-Junction using ED5-2,ED5-4,SD5-1,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY45Junction_Horizontal};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:4};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Main 1 Diameter(m)','Main 2 Diameter(m)','Branch Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, bullhead diverge SD5-18, use Cb
+                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.SD5_18(abs(q([1,2,3])), s([1,2,3,4]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-1 at downstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.SD5_1(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                    case 3 %[0,1,1]*[4;2;1], - + +, flow inward from the branch, T converge ED5-1 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, flow outward from the branch, T diverge SD5-3 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, flow inward from the branch, T converge ED5-2 at upstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,3,2,4])] = DuctNetwork.ED5_2(abs(q([1,3,2])),s([1,3,2,4]),'s');
+                    case 6 %[1,1,0]*[4;2;1], + + -, flow inward from the opposite main, bullhead converge ED5-4, use Cb
+                        if s(1)>=s(2) % D1>D2, use Cb1
+                            [dP, dPdQ([1,2,3]), dPdS([1,2,3,4])] = DuctNetwork.ED5_4(abs(q([1,2,3])), s([1,2,3,4]), 'b1');
+                        else % D1<D2, use Cb2
+                            [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_4(abs(q([2,1,3])), s([2,1,3,4]), 'b2');
+                        end
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
+        
+        function varargout = CircularY45Junction_Side( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Side branch of Circular Y-30-Junction using ED5-2,ED5-4,SD5-1,SD5-18';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.CircularY45Junction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:4};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Branch Diameter(m)','Main 1 Diameter(m)','Main 2 Diameter(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, T diverge SD5-1 at downstream side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.SD5_1(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SD5-1 at downstream side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.SD5_1(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                    case 3 %[0,1,1]*[4;2;1], - + +, bullhead converge ED5-4 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, bullhead diverge SD5-18 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, T converge ED5-2 at branch side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([3,1,2,4])] = DuctNetwork.ED5_2(abs(q([3,1,2])),s([3,1,2,4]),'b');
+                    case 6 %[1,1,0]*[4;2;1], + + -, T converge ED5-2 at branch side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([2,1,3,4])] = DuctNetwork.ED5_2(abs(q([2,1,3])),s([2,1,3,4]),'b');
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
+        
+        function varargout = RectangularYJunction( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        varargout{ii}=0;
+                    case 'dPdQ'
+                        varargout{ii}=zeros(3,1);
+                    case 'dPdS'
+                        varargout{ii}=zeros(5,1);
+                    case 'Model_Description'
+                        varargout{ii}='Rectangular Y-Junction using SR5-1,ER5-1,SR5-14,ER5-4';
+                    case 'Is_Junction'
+                        varargout{ii}=true;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.RectangularYJunction_Horizontal,@DuctNetwork.RectangularYJunction_Horizontal,@DuctNetwork.RectangularYJunction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3];[2,1,3];[3,1,2]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={[1,2,3,4,5];[1,3,2,4,5];[1,4,2,3,5]};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Height (m)','Main 1 Width(m)','Main 2 Width(m)','Branch Width(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0];
+                end
+            end
+        end
+        
+        function varargout = RectangularYJunction_Horizontal( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Horizontal part of Rectangular Y-Junction using SR5-1,ER5-1,SR5-14,ER5-4';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.RectangularYJunction_Horizontal};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:5};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Height (m)','Main 1 Width(m)','Main 2 Width(m)','Branch Width(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, bullhead diverge SR5-14, use Cb
+                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4,5])] = DuctNetwork.SR5_14(abs(q([1,2,3])), s([1,2,3,4,5]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SR5-1 at downstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,2,4,3,5])] = DuctNetwork.SR5_1(abs(q([1,3,2])),s([1,2,4,3,5]),'s');
+                    case 3 %[0,1,1]*[4;2;1], - + +, flow inward from the branch, T converge ER5-1 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, flow outward from the branch, T diverge SR5-1 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, flow inward from the branch, T converge ER5-1 at upstream side, use Cs
+                        [dP, dPdQ([1,3,2]), dPdS([1,2,4,3,5])] = DuctNetwork.ER5_1(abs(q([1,3,2])),s([1,3,2,4,5]),'s');
+                    case 6 %[1,1,0]*[4;2;1], + + -, flow inward from the opposite main, bullhead converge ER5-4, use Cb
+                        [dP, dPdQ([1,2,3]), dPdS([1,2,3,4,5])] = DuctNetwork.ER5_4(abs(q([1,2,3])), s([1,2,3,4,5]), 'b');
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
+        
+        function varargout = RectangularYJunction_Side( query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {}; return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = reshape(varargin{1},1,[]);
+                        s = reshape(varargin{2},1,[]);
+                        [dP,dPdQ,dPdS] = Calculation(q,s);
+                        varargout{ii} = dP;
+                    case 'dPdQ'
+                        varargout{ii} = dPdQ;
+                    case 'dPdS'
+                        varargout{ii} = dPdS;
+                    case 'Model_Description'
+                        varargout{ii}='Side branch of Rectangular Y-Junction using SR5-1,ER5-1,SR5-14,ER5-4';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.RectangularYJunction_Side};
+                    case 'Branch_Assignment'
+                        varargout{ii}={[1,2,3]};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:5};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Height (m)','Main 1 Width(m)','Main 2 Width(m)','Branch Width(m)','Density(kg/m^3)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,false,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[0,0,0,0,0,0];
+                end
+            end
+            function [dP,dPdQ,dPdS]=Calculation(q,s)
+                dir = sign(q);
+                switch (q>0)*[4;2;1]
+                    case 1 %[0,0,1]*[4;2;1], - - +, T diverge SR5-1 at downstream side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([1,3,2,4,5])] = DuctNetwork.SR5_1(abs(q([2,1,3])),s([1,3,2,4,5]),'b');
+                    case 2 %[0,1,0]*[4;2;1], - + -, T diverge SR5-1 at downstream side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([1,4,2,3,5])] = DuctNetwork.SR5_1(abs(q([3,1,2])),s([1,4,2,3,5]),'b');
+                    case 3 %[0,1,1]*[4;2;1], - + +, bullhead converge ED5-4 at downsteram side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 4 %[1,0,0]*[4;2;1], + - -, bullhead diverge SD5-18 at upstream side, no pressure drop
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 5 %[1,0,1]*[4;2;1], + - +, T converge ER5-1 at branch side, use Cb
+                        [dP, dPdQ([3,1,2]), dPdS([1,4,2,3,5])] = DuctNetwork.ER5_1(abs(q([3,1,2])),s([1,4,2,3,5]),'b');
+                    case 6 %[1,1,0]*[4;2;1], + + -, T converge ER5-1 at branch side, use Cb
+                        [dP, dPdQ([2,1,3]), dPdS([1,3,2,4,5])] = DuctNetwork.ER5_1(abs(q([2,1,3])),s([1,3,2,4,5]),'b');
+                    case 7 %[1,1,1]*[4;2;1], + + +, impossible
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                    case 0 %[0,0,0]*[4;2;1], - - -, impossible                        
+                        dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+                end
+                dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
+            end
+        end
     end
     
     properties (Constant)
-        ED5_3 = load('FittingData/ED5_3.mat');
-        SD5_9 = load('FittingData/SD5_9.mat');
-        ED5_4 = load('FittingData/ED5_4.mat');
-        SD5_18 = load('FittingData/SD5_18.mat');
+        ED5_3_Table = load('FittingData/ED5_3.mat');
+        SD5_9_Table = load('FittingData/SD5_9.mat');
+        ED5_4_Table = load('FittingData/ED5_4.mat');
+        SD5_18_Table = load('FittingData/SD5_18.mat');
+        ED5_1_Table = load('FittingData/ED5_1.mat');
+        SD5_3_Table = load('FittingData/SD5_3.mat');
+        ED5_2_Table = load('FittingData/ED5_2.mat');
+        SD5_1_Table = load('FittingData/SD5_1.mat');
+        SR5_14_Table = load('FittingData/SR5_14.mat');
+        ER5_1_Table = load('FittingData/ER5_1.mat');
+        SR5_1_Table = load('FittingData/SR5_1.mat');
+        ER5_4_Table = load('FittingData/ER5_4.mat');
     end
     
     methods (Static = true)
-        function [dP, dPdQ, dPdS]=Calc_ED5_3(q,s,Selection)
+        function [dP, dPdQ, dPdS]=ED5_3(q,s,Selection)
             gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
             dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
             dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
             switch Selection
                 case 's'
                     if s(3)<=0.25 %Dc<= 0.25m
-                        Cs_Table = DuctNetwork.ED5_3.Cs_part1;
+                        Cs_Table = DuctNetwork.ED5_3_Table.Cs_part1;
                     else
-                        Cs_Table = DuctNetwork.ED5_3.Cs_part2;
+                        Cs_Table = DuctNetwork.ED5_3_Table.Cs_part2;
                     end
-                    GridVec = {DuctNetwork.ED5_3.QsQc,DuctNetwork.ED5_3.AbAc,DuctNetwork.ED5_3.AsAc};
+                    GridVec = {DuctNetwork.ED5_3_Table.QsQc,DuctNetwork.ED5_3_Table.AbAc,DuctNetwork.ED5_3_Table.AsAc};
                     ZExp = @(q,s)[q(1)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
                     dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
                     dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
                     [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cs_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 case 'b'
                     if s(3)<=0.25 %Dc<= 0.25m
-                        Cb_Table = DuctNetwork.ED5_3.Cb_part1;
+                        Cb_Table = DuctNetwork.ED5_3_Table.Cb_part1;
                     else
-                        Cb_Table = DuctNetwork.ED5_3.Cb_part2;
+                        Cb_Table = DuctNetwork.ED5_3_Table.Cb_part2;
                     end
-                    GridVec = {DuctNetwork.ED5_3.QbQc,DuctNetwork.ED5_3.AbAc,DuctNetwork.ED5_3.AsAc};
+                    GridVec = {DuctNetwork.ED5_3_Table.QbQc,DuctNetwork.ED5_3_Table.AbAc,DuctNetwork.ED5_3_Table.AsAc};
                     ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
                     dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
                     dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
@@ -820,63 +1418,235 @@ classdef DuctNetwork < handle
             end
         end
         
-        function [dP, dPdQ, dPdS]=Calc_SD5_9(q,s,Selection)
+        function [dP, dPdQ, dPdS]=SD5_9(q,s,Selection)
             gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
             dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
             dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
             switch Selection
                 case 'b'
-                    GridVec = {DuctNetwork.SD5_9.QbQc,DuctNetwork.SD5_9.AbAc};
+                    GridVec = {DuctNetwork.SD5_9_Table.QbQc,DuctNetwork.SD5_9_Table.AbAc};
                     ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2];
                     dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0];
                     dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0];
-                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_9.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_9_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 case 's'
-                    GridVec = {DuctNetwork.SD5_9.QsQc,DuctNetwork.SD5_9.AsAc};
+                    GridVec = {DuctNetwork.SD5_9_Table.QsQc,DuctNetwork.SD5_9_Table.AsAc};
                     ZExp = @(q,s)[q(1)/q(3);(s(1)/s(3))^2];
                     dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0];
                     dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
-                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_9.Cs, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_9_Table.Cs, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 otherwise
                     dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
             end
         end
         
-        function [dP, dPdQ, dPdS]=Calc_ED5_4(q,s,Selection)
+        function [dP, dPdQ, dPdS]=ED5_4(q,s,Selection)
             gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
             dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
             dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
             switch Selection
                 case 'b1'
-                    GridVec = {DuctNetwork.ED5_4.QbQc,DuctNetwork.ED5_4.AbAc,DuctNetwork.ED5_4.AbAc};
+                    GridVec = {DuctNetwork.ED5_4_Table.QbQc,DuctNetwork.ED5_4_Table.AbAc,DuctNetwork.ED5_4_Table.AbAc};
                     ZExp = @(q,s)[q(1)/q(3);(s(1)/s(3))^2;(s(2)/s(3))^2];
                     dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
                     dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0];
-                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.ED5_4.Cb1, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.ED5_4_Table.Cb1, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 case 'b2'
-                    GridVec = {DuctNetwork.ED5_4.QbQc,DuctNetwork.ED5_4.AbAc,DuctNetwork.ED5_4.AbAc};
+                    GridVec = {DuctNetwork.ED5_4_Table.QbQc,DuctNetwork.ED5_4_Table.AbAc,DuctNetwork.ED5_4_Table.AbAc};
                     ZExp = @(q,s)[q(2)/q(3);(s(1)/s(3))^2;(s(2)/s(3))^2];
                     dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
                     dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0];
-                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.ED5_4.Cb2, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.ED5_4_Table.Cb2, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 otherwise
                     dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
             end
         end
         
-        function [dP, dPdQ, dPdS]=Calc_SD5_18(q,s,Selection)
+        function [dP, dPdQ, dPdS]=SD5_18(q,s,Selection)
             gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
             dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
             dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
             switch Selection
                 case 'b'
-                    GridVec = {DuctNetwork.SD5_18.QbQc,DuctNetwork.SD5_18.AbAc};
+                    GridVec = {DuctNetwork.SD5_18_Table.QbQc,DuctNetwork.SD5_18_Table.AbAc};
                     ZExp = @(q,s)[q(1)/q(3);(s(1)/s(3))^2];
                     dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0];
                     dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
-                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_18.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_18_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
                 otherwise
                     dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+            end
+        end
+
+        function [dP, dPdQ, dPdS]=ED5_1(q,s,Selection)
+            gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
+            dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
+            dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
+            switch Selection
+                case 's'
+                    Cs_Table = DuctNetwork.ED5_1_Table.Cs;
+                    GridVec = {DuctNetwork.ED5_1_Table.QsQc,DuctNetwork.ED5_1_Table.AbAc,DuctNetwork.ED5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cs_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 'b'
+                    Cb_Table = DuctNetwork.ED5_1_Table.Cb;
+                    GridVec = {DuctNetwork.ED5_1_Table.QbQc,DuctNetwork.ED5_1_Table.AbAc,DuctNetwork.ED5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+            end
+        end
+        
+        function [dP, dPdQ, dPdS]=SD5_3(q,s,Selection)
+            gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
+            dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
+            dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
+            switch Selection
+                case 'b'
+                    GridVec = {DuctNetwork.SD5_3_Table.QbQc,DuctNetwork.SD5_3_Table.AbAc};
+                    ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_3_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 's'
+                    GridVec = {DuctNetwork.SD5_3_Table.QsQc,DuctNetwork.SD5_3_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);(s(1)/s(3))^2];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_3_Table.Cs, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+            end
+        end
+        
+        function [dP, dPdQ, dPdS]=ED5_2(q,s,Selection)
+            gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
+            dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
+            dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
+            switch Selection
+                case 's'
+                    Cs_Table = DuctNetwork.ED5_2_Table.Cs;
+                    GridVec = {DuctNetwork.ED5_2_Table.QsQc,DuctNetwork.ED5_2_Table.AbAc,DuctNetwork.ED5_21_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cs_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 'b'
+                    Cb_Table = DuctNetwork.ED5_2_Table.Cb;
+                    GridVec = {DuctNetwork.ED5_2_Table.QbQc,DuctNetwork.ED5_2_Table.AbAc,DuctNetwork.ED5_2_Table.AsAc};
+                    ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+            end
+        end
+        
+        function [dP, dPdQ, dPdS]=SD5_1(q,s,Selection)
+            gExp = @(q,s) 0.5*s(4)*(q(3)/(pi*s(3)^2/4))^2;
+            dgdq = @(q,s) [0,0,s(4)*q(3)/(pi*s(3)^2/4)^2];
+            dgds = @(q,s) [0,0,-2/s(3),1/s(4)]*gExp(q,s);
+            switch Selection
+                case 'b'
+                    GridVec = {DuctNetwork.SD5_1_Table.QbQc,DuctNetwork.SD5_1_Table.AbAc};
+                    ZExp = @(q,s)[q(2)/q(3);(s(2)/s(3))^2];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_1_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 's'
+                    GridVec = {DuctNetwork.SD5_1_Table.QsQc,DuctNetwork.SD5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);(s(1)/s(3))^2];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0];
+                    dZds = @(q,s)[0,0,0,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SD5_1_Table.Cs, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0];
+            end
+        end
+
+        function [dP, dPdQ, dPdS]=SR5_14(q,s,Selection)
+            gExp = @(q,s) 0.5*s(5)*(q(1)/(s(1)*s(2)))^2;
+            dgdq = @(q,s) [s(5)*q(1)/(s(1)*s(2))^2,0,0];
+            dgds = @(q,s) [-2/s(1),-2/s(2),0,0,1/s(5)]*gExp(q,s);
+            switch Selection
+                case 'b'
+                    GridVec = {DuctNetwork.SR5_14_Table.AbAc};
+                    ZExp = @(q,s)s(2)/s(4);
+                    dZdq = @(q,s)[0,0,0];
+                    dZds = @(q,s)[0,1/s(4),0,-1*s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.SR5_14_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+            end
+        end
+
+        function [dP, dPdQ, dPdS]=ER5_4(q,s,Selection)
+            gExp = @(q,s) 0.5*s(5)*(q(1)/(s(1)*s(2)))^2;
+            dgdq = @(q,s) [s(5)*q(1)/(s(1)*s(2))^2,0,0];
+            dgds = @(q,s) [-2/s(1),-2/s(2),0,0,1/s(5)]*gExp(q,s);
+            switch Selection
+                case 'b'
+                    GridVec = {DuctNetwork.ER5_4_Table.AbAc};
+                    ZExp = @(q,s)s(2)/s(4);
+                    dZdq = @(q,s)[0,0,0];
+                    dZds = @(q,s)[0,1/s(4),0,-1*s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec,DuctNetwork.ER5_4_Table.Cb, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+            end
+        end
+        
+        function [dP, dPdQ, dPdS]=ER5_1(q,s,Selection)
+            gExp = @(q,s) 0.5*s(5)*(q(3)/(s(1)*s(4)))^2;
+            dgdq = @(q,s) [0,0,s(5)*q(3)/(s(1)*s(4))^2];
+            dgds = @(q,s) [-2/s(1),0,0,-2/s(4),1/s(5)]*gExp(q,s);
+            switch Selection
+                case 's'
+                    Cs_Table = DuctNetwork.ER5_1_Table.Cs;
+                    GridVec = {DuctNetwork.ER5_1_Table.QsQc,DuctNetwork.ER5_1_Table.AbAc,DuctNetwork.ER5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);s(3)/s(4);s(2)/s(4)];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cs_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 'b'
+                    Cb_Table = DuctNetwork.ER5_1_Table.Cb;
+                    GridVec = {DuctNetwork.ER5_1_Table.QbQc,DuctNetwork.ER5_1_Table.AbAc,DuctNetwork.ER5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(2)/q(3);s(3)/s(4);s(2)/s(4)];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
+            end
+        end
+        
+        function [dP, dPdQ, dPdS]=SR5_1(q,s,Selection)
+            gExp = @(q,s) 0.5*s(5)*(q(3)/(s(1)*s(4)))^2;
+            dgdq = @(q,s) [0,0,s(5)*q(3)/(s(1)*s(4))^2];
+            dgds = @(q,s) [-2/s(1),0,0,-2/s(4),1/s(5)]*gExp(q,s);
+            switch Selection
+                case 's'
+                    Cs_Table = DuctNetwork.SR5_1_Table.Cs;
+                    GridVec = {DuctNetwork.SR5_1_Table.QsQc,DuctNetwork.SR5_1_Table.AbAc,DuctNetwork.SR5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(1)/q(3);s(3)/s(4);s(2)/s(4)];
+                    dZdq = @(q,s)[1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cs_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                case 'b'
+                    Cb_Table = DuctNetwork.SR5_1_Table.Cb;
+                    GridVec = {DuctNetwork.SR5_1_Table.QbQc,DuctNetwork.SR5_1_Table.AbAc,DuctNetwork.SR5_1_Table.AsAc};
+                    ZExp = @(q,s)[q(2)/q(3);s(3)/s(4);s(2)/s(4)];
+                    dZdq = @(q,s)[0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
+                    dZds = @(q,s)[0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0];
+                    [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                otherwise
+                    dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0];
             end
         end
         
