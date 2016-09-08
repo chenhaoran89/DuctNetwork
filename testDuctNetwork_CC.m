@@ -8,7 +8,7 @@ duct.AddFitting([1,2,3],'SR5_13_Junction',[0.2,0.3,0.2,0.1,0.2,0.2]);
 [X,Q,P]=duct.Sim();
 %%
 h=1e-6;
-X0 = ones(duct.t,1);
+X0 = [0.9;0.22];
 Branch = 3;
 [dP,dPdQ,dPdS]=duct.BranchPressureDrop(Branch,X0,duct.S);
 dP1 = duct.BranchPressureDrop(Branch,(X0+[h;0]),duct.S);
