@@ -321,8 +321,8 @@ classdef DuctNetwork < handle
             while ~(exitflag>0 && resnorm<1e-4)
                 obj.n_trail = obj.n_trail+1;
                 [X,resnorm,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
-                X0 = rand(obj.t,1);
-                options = optimoptions(options,'SpecifyObjectiveGradient',false);
+                X0 = randn(obj.t,1);
+%                 options = optimoptions(options,'SpecifyObjectiveGradient',false);
             end
             dP=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,X,S_value),(1:obj.b)','UniformOutput',false);
             dP=cell2mat(dP);
@@ -462,12 +462,13 @@ classdef DuctNetwork < handle
             for ii = 1:n
                 switch query{ii}
                     case 'Pdrop'
+                        q = varargin{1};
                         s = varargin{2};
-                        varargout{ii} = -s;
+                        varargout{ii} = -s*sign(q);
                     case 'dPdQ'
                         varargout{ii} = 0;
                     case 'dPdS'
-                        varargout{ii} = -1;
+                        varargout{ii} = -sign(q);
                     case 'Model_Description'
                         varargout{ii}='Flow source with constant pressure';
                     case 'Is_Junction'
@@ -1619,13 +1620,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_CD3_6.D};
                         Co_Table = DuctNetwork.Table_CD3_6.Co;
-                        gExp = @(q,s)0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(2)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(1)];
-                        dZdq = @(q,s)[0];
-                        dZds = @(q,s)[1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(2)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = s(1);
+                        dZdq = 0;
+                        dZds = [1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -1673,13 +1674,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_CD3_9.D};
                         Co_Table = DuctNetwork.Table_CD3_9.Co;
-                        gExp = @(q,s)0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(2)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(1)];
-                        dZdq = @(q,s)[0];
-                        dZds = @(q,s)[1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(2)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = s(1);
+                        dZdq = 0;
+                        dZds = [1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -1727,13 +1728,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_CD3_17.D};
                         Co_Table = DuctNetwork.Table_CD3_17.Co;
-                        gExp = @(q,s)0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(2)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(1)];
-                        dZdq = @(q,s)[0];
-                        dZds = @(q,s)[1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(2)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(2)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(2)*q*abs(q)/s(1)^5/pi^2,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = [s(1)];
+                        dZdq = [0];
+                        dZds = [1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -1783,13 +1784,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_CD6_1.n,DuctNetwork.Table_CD6_1.A1Ao};
                         Co_Table = DuctNetwork.Table_CD6_1.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(4)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(3);s(2)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[0,0,1,0;0,1,0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(4)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = [s(3);s(2)];
+                        dZdq = [0;0];
+                        dZds = [0,0,1,0;0,1,0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -1839,13 +1840,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_CD9_1.Theta,DuctNetwork.Table_CD9_1.DDo};
                         Co_Table = DuctNetwork.Table_CD9_1.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(4)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(3);s(2)/s(1)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[0,0,1,0;-s(2)/s(1)^2,1/s(1),0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(4)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = [s(3);s(2)/s(1)];
+                        dZdq = [0;0];
+                        dZds = [0,0,1,0;-s(2)/s(1)^2,1/s(1),0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -1939,20 +1940,20 @@ classdef DuctNetwork < handle
                         %             rho = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         GridVector1 = {DuctNetwork.Table_CR3_1.HW,DuctNetwork.Table_CR3_1.rW};
                         InterpTable1 = DuctNetwork.Table_CR3_1.Cp;
-                        Z1Exp = @(q,s)[s(1)/s(2);s(3)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
+                        Z1Exp = [s(1)/s(2);s(3)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_1.Theta};
                         InterpTable2 = DuctNetwork.Table_CR3_1.K;
-                        Z2Exp = @(q,s)[s(4)];
-                        dZ2dq = @(q,s)[0];
-                        dZ2ds = @(q,s)[0,0,0,1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = s(4);
+                        dZ2dq = 0;
+                        dZ2ds = [0,0,0,1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2001,20 +2002,20 @@ classdef DuctNetwork < handle
                         %             rho = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         GridVector1 = {DuctNetwork.Table_CR3_3.HW,DuctNetwork.Table_CR3_3.rW};
                         InterpTable1 = DuctNetwork.Table_CR3_3.Cp;
-                        Z1Exp = @(q,s)[s(1)/s(2);s(3)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
+                        Z1Exp = [s(1)/s(2);s(3)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_3.Theta};
                         InterpTable2 = DuctNetwork.Table_CR3_3.K;
-                        Z2Exp = @(q,s)[s(4)];
-                        dZ2dq = @(q,s)[0];
-                        dZ2ds = @(q,s)[0,0,0,1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = s(4);
+                        dZ2dq = 0;
+                        dZ2ds = [0,0,0,1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2064,13 +2065,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_CR3_6.HW,DuctNetwork.Table_CR3_6.Theta};
                         Co_Table = DuctNetwork.Table_CR3_6.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
-                        ZExp = @(q,s)[s(1)/s(2);s(3)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0;0,0,1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        ZExp = [s(1)/s(2);s(3)];
+                        dZdq = [0;0];
+                        dZds = [1/s(2),-s(1)/s(2)^2,0,0;0,0,1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2165,20 +2166,20 @@ classdef DuctNetwork < handle
                         %             nu = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
                         GridVector1 = {DuctNetwork.Table_CR3_17.LW,DuctNetwork.Table_CR3_17.HW};
                         InterpTable1 = DuctNetwork.Table_CR3_17.Cp;
-                        Z1Exp = @(q,s)[s(3)/s(2);s(1)/s(2)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[0,-s(3)/s(2)^2,1/s(2),0,0;1/s(2),-s(1)/s(2)^2,0,0,0];
+                        Z1Exp = [s(3)/s(2);s(1)/s(2)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [0,-s(3)/s(2)^2,1/s(2),0,0;1/s(2),-s(1)/s(2)^2,0,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_17.Re};
                         InterpTable2 = DuctNetwork.Table_CR3_17.Kr;
-                        Z2Exp = @(q,s)[2*abs(q)/(s(1)+s(2))/s(5)];
-                        dZ2dq = @(q,s)[2*sign(q)/(s(1)+s(2))/s(5)];
-                        dZ2ds = @(q,s)[-2*abs(q)/(s(1)+s(2))^2/s(5),-2*abs(q)/(s(1)+s(2))^2/s(5),0,0,-2*abs(q)/(s(1)+s(2))/s(5)^2];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = 2*abs(q)/(s(1)+s(2))/s(5);
+                        dZ2dq = 2*sign(q)/(s(1)+s(2))/s(5);
+                        dZ2ds = [-2*abs(q)/(s(1)+s(2))^2/s(5),-2*abs(q)/(s(1)+s(2))^2/s(5),0,0,-2*abs(q)/(s(1)+s(2))/s(5)^2];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2229,13 +2230,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_CR6_1.n,DuctNetwork.Table_CR6_1.A1Ao};
                         Co_Table = DuctNetwork.Table_CR6_1.Co;
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
-                        ZExp = @(q,s)[s(4);s(3)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[0,0,0,1,0;0,0,1,0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        ZExp = [s(4);s(3)];
+                        dZdq = [0;0];
+                        dZds = [0,0,0,1,0;0,0,1,0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2287,13 +2288,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_CR6_4.SmAo,DuctNetwork.Table_CR6_4.Re,DuctNetwork.Table_CR6_4.yH};
                         Co_Table = DuctNetwork.Table_CR6_4.Co;
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
-                        ZExp = @(q,s)[s(3)/s(1);abs(q)*s(3)/s(1)/s(2)/s(6);s(4)/s(1)];
-                        dZdq = @(q,s)[0;sign(q)*s(3)/s(1)/s(2)/s(6);0];
-                        dZds = @(q,s)[-s(3)/s(1)^2,0,1/s(1),0,0,0;-abs(q)*s(3)/s(1)^2/s(2)/s(6),-abs(q)*s(3)/s(1)/s(2)^2/s(6),abs(q)/s(1)/s(2)/s(6),0,0,-abs(q)*s(3)/s(1)/s(2)/s(6)^2;-s(4)/s(1)^2,0,0,1/s(1),0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                        ZExp = [s(3)/s(1);abs(q)*s(3)/s(1)/s(2)/s(6);s(4)/s(1)];
+                        dZdq = [0;sign(q)*s(3)/s(1)/s(2)/s(6);0];
+                        dZds = [-s(3)/s(1)^2,0,1/s(1),0,0,0;-abs(q)*s(3)/s(1)^2/s(2)/s(6),-abs(q)*s(3)/s(1)/s(2)^2/s(6),abs(q)/s(1)/s(2)/s(6),0,0,-abs(q)*s(3)/s(1)/s(2)/s(6)^2;-s(4)/s(1)^2,0,0,1/s(1),0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2343,13 +2344,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_CR9_1.Theta,DuctNetwork.Table_CR9_1.HW};
                         Co_Table = DuctNetwork.Table_CR9_1.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
-                        ZExp = @(q,s)[s(3);s(1)/s(2)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[0,0,1,0;1/s(2),-s(1)/s(2)^2,0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        ZExp = [s(3);s(1)/s(2)];
+                        dZdq = [0;0];
+                        dZds = [0,0,1,0;1/s(2),-s(1)/s(2)^2,0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2491,13 +2492,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_ED1_1.LD,DuctNetwork.Table_ED1_1.tD};
                         Co_Table = DuctNetwork.Table_ED1_1.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(4)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(3)/s(1);s(2)/s(1)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[-s(3)/s(1)^2,0,1/s(1),0;-s(2)/s(1)^2,1/s(1),0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(4)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = [s(3)/s(1);s(2)/s(1)];
+                        dZdq = [0;0];
+                        dZds = [-s(3)/s(1)^2,0,1/s(1),0;-s(2)/s(1)^2,1/s(1),0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2546,13 +2547,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_ED1_3.rD};
                         Co_Table = DuctNetwork.Table_ED1_3.Co;
-                        gExp = @(q,s)0.5*s(3)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(3)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(3)*q*abs(q)/s(1)^5/pi^2,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(2)/s(1)];
-                        dZdq = @(q,s)[0];
-                        dZds = @(q,s)[-s(2)/s(1)^2,1/s(1),0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(3)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(3)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(3)*q*abs(q)/s(1)^5/pi^2,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = s(2)/s(1);
+                        dZdq = 0;
+                        dZds = [-s(2)/s(1)^2,1/s(1),0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2602,13 +2603,13 @@ classdef DuctNetwork < handle
                         %             V = q/pi/(s(1)/2)^2;
                         GridVec = {DuctNetwork.Table_ED7_2.LD,DuctNetwork.Table_ED7_2.rD};
                         Co_Table = DuctNetwork.Table_ED7_2.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
-                        dgdq = @(q,s)s(4)*abs(q)/pi^2/(s(1)/2)^4;
-                        dgds = @(q,s)[-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
-                        ZExp = @(q,s)[s(3)/s(1);s(2)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[-s(3)/s(1)^2,0,1/s(1),0;0,1,0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/pi^2/(s(1)/2)^4;
+                        dgdq = s(4)*abs(q)/pi^2/(s(1)/2)^4;
+                        dgds = [-32*s(4)*q*abs(q)/s(1)^5/pi^2,0,0,0.5*q*abs(q)/pi^2/(s(1)/2)^4];
+                        ZExp = [s(3)/s(1);s(2)];
+                        dZdq = [0;0];
+                        dZds = [-s(3)/s(1)^2,0,1/s(1),0;0,1,0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2660,31 +2661,31 @@ classdef DuctNetwork < handle
                         %             Vo = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_ER4_3.tanTheta,DuctNetwork.Table_ER4_3.AoA1};
                         Co_Table = DuctNetwork.Table_ER4_3.Co;
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         if abs(s(3)-s(1)) > abs(s(3)-s(2))% use abs(s(3)-s(1)) in Z expression
                             if s(3) > s(1)
-                                ZExp = @(q,s)[(s(3)-s(1))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[-1/2/s(4),0,1/2/s(4),-(s(3)-s(1))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
+                                ZExp = [(s(3)-s(1))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
+                                dZdq = [0;0];
+                                dZds = [-1/2/s(4),0,1/2/s(4),-(s(3)-s(1))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
                             else
-                                ZExp = @(q,s)[(s(1)-s(3))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[1/2/s(4),0,-1/2/s(4),-(s(1)-s(3))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
+                                ZExp = [(s(1)-s(3))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
+                                dZdq = [0;0];
+                                dZds = [1/2/s(4),0,-1/2/s(4),-(s(1)-s(3))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
                             end
                         else% use abs(s(3)-s(2)) in Z expression
                             if s(3) > s(2)
-                                ZExp = @(q,s)[(s(3)-s(2))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[0,-1/2/s(4),1/2/s(4),-(s(3)-s(2))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
+                                ZExp = [(s(3)-s(2))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
+                                dZdq = [0;0];
+                                dZds = [0,-1/2/s(4),1/2/s(4),-(s(3)-s(2))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
                             else
-                                ZExp = @(q,s)[(s(2)-s(3))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[0,1/2/s(4),-1/2/s(4),-(s(2)-s(3))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
+                                ZExp = [(s(2)-s(3))/2/s(4);s(1)*s(2)/pi/(s(3)/2)^2];
+                                dZdq = [0;0];
+                                dZds = [0,1/2/s(4),-1/2/s(4),-(s(2)-s(3))/2/s(4)^2,0;s(2)/pi/(s(3)/2)^2,s(1)/pi/(s(3)/2)^2,-8*s(1)*s(2)/pi/s(3)^3,0,0];
                             end
                         end
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2735,13 +2736,13 @@ classdef DuctNetwork < handle
                         if 2*abs(q)/(s(1)+s(2))/s(4) < 3000 % laminar flow
                             GridVec = {DuctNetwork.Table_SR2_1.HW};
                             Co_Table = DuctNetwork.Table_SR2_1.Co;
-                            gExp = @(q,s)0.5*s(3)*q*abs(q)/s(1)^2/s(2)^2;
-                            dgdq = @(q,s)s(3)*abs(q)/s(1)^2/s(2)^2;
-                            dgds = @(q,s)[-s(3)*q*abs(q)/s(1)^3/s(2)^2,-s(3)*q*abs(q)/s(1)^2/s(2)^3,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
-                            ZExp = @(q,s)[s(1)/s(2)];
-                            dZdq = @(q,s)[0];
-                            dZds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0];
-                            [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                            gExp = 0.5*s(3)*q*abs(q)/s(1)^2/s(2)^2;
+                            dgdq = s(3)*abs(q)/s(1)^2/s(2)^2;
+                            dgds = [-s(3)*q*abs(q)/s(1)^3/s(2)^2,-s(3)*q*abs(q)/s(1)^2/s(2)^3,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                            ZExp = [s(1)/s(2)];
+                            dZdq = 0;
+                            dZds = [1/s(2),-s(1)/s(2)^2,0,0];
+                            [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         else % turbulent flow, Co=1
                             dP = 0.5*s(3)*q*abs(q)/s(1)^2/s(2)^2;
                             dPdQ = s(3)*abs(q)/s(1)^2/s(2)^2;
@@ -2798,13 +2799,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR2_3.Theta,DuctNetwork.Table_SR2_3.Re,DuctNetwork.Table_SR2_3.A1Ao};
                         Co_Table = DuctNetwork.Table_SR2_3.Co;
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
-                        ZExp = @(q,s)[s(3);2*abs(q)/(s(1)+s(2))/s(6);2*tan(s(3)*pi/360)*s(4)/s(1)+1];
-                        dZdq = @(q,s)[0;2*sign(q)/(s(1)+s(2))/s(6);0];
-                        dZds = @(q,s)[0,0,1,0,0,0;-2*abs(q)/(s(1)+s(2))^2/s(6),-2*abs(q)/(s(1)+s(2))^2/s(6),0,0,0,-2*abs(q)/(s(1)+s(2))/s(6)^2;-2*tan(s(3)*pi/360)*s(4)/s(1)^2,0,2*s(4)/s(1)*sec(s(3)*pi/360)^2*pi/360,2*tan(s(3)*pi/360)/s(1),0,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                        ZExp = [s(3);2*abs(q)/(s(1)+s(2))/s(6);2*tan(s(3)*pi/360)*s(4)/s(1)+1];
+                        dZdq = [0;2*sign(q)/(s(1)+s(2))/s(6);0];
+                        dZds = [0,0,1,0,0,0;-2*abs(q)/(s(1)+s(2))^2/s(6),-2*abs(q)/(s(1)+s(2))^2/s(6),0,0,0,-2*abs(q)/(s(1)+s(2))/s(6)^2;-2*tan(s(3)*pi/360)*s(4)/s(1)^2,0,2*s(4)/s(1)*sec(s(3)*pi/360)^2*pi/360,2*tan(s(3)*pi/360)/s(1),0,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2858,31 +2859,31 @@ classdef DuctNetwork < handle
                         %             Vo = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR2_5.tanTheta,DuctNetwork.Table_SR2_5.Re,DuctNetwork.Table_SR2_5.A1Ao};
                         Co_Table = DuctNetwork.Table_SR2_5.Co;
-                        gExp = @(q,s)0.5*s(6)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(6)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(6)*q*abs(q)/s(1)^3/s(2)^2,-s(6)*q*abs(q)/s(1)^2/s(2)^3,0,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                        gExp = 0.5*s(6)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(6)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(6)*q*abs(q)/s(1)^3/s(2)^2,-s(6)*q*abs(q)/s(1)^2/s(2)^3,0,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
                         if abs(s(3)-s(1)) > abs(s(4)-s(2))% use abs(s(3)-s(1)) in Z expression
                             if s(3) > s(1)
-                                ZExp = @(q,s)[(s(3)-s(1))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
-                                dZdq = @(q,s)[0;2*sign(q)/(s(1)+s(2))/s(7);0];
-                                dZds = @(q,s)[-1/2/s(5),0,1/2/s(5),0,-(s(3)-s(1))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
+                                ZExp = [(s(3)-s(1))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
+                                dZdq = [0;2*sign(q)/(s(1)+s(2))/s(7);0];
+                                dZds = [-1/2/s(5),0,1/2/s(5),0,-(s(3)-s(1))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
                             else
-                                ZExp = @(q,s)[(s(1)-s(3))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
-                                dZdq = @(q,s)[0;2*sign(q)/(s(1)+s(2))/s(7);0];
-                                dZds = @(q,s)[1/2/s(5),0,-1/2/s(5),0,-(s(1)-s(3))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
+                                ZExp = [(s(1)-s(3))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
+                                dZdq = [0;2*sign(q)/(s(1)+s(2))/s(7);0];
+                                dZds = [1/2/s(5),0,-1/2/s(5),0,-(s(1)-s(3))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
                             end
                         else% use abs(s(4)-s(2)) in Z expression
                             if s(4) > s(2)
-                                ZExp = @(q,s)[(s(4)-s(2))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
-                                dZdq = @(q,s)[0;2*sign(q)/(s(1)+s(2))/s(7);0];
-                                dZds = @(q,s)[0,-1/2/s(5),0,1/2/s(5),-(s(4)-s(2))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
+                                ZExp = [(s(4)-s(2))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
+                                dZdq = [0;2*sign(q)/(s(1)+s(2))/s(7);0];
+                                dZds = [0,-1/2/s(5),0,1/2/s(5),-(s(4)-s(2))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
                             else
-                                ZExp = @(q,s)[(s(2)-s(4))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
-                                dZdq = @(q,s)[0;2*sign(q)/(s(1)+s(2))/s(7);0];
-                                dZds = @(q,s)[0,1/2/s(5),0,-1/2/s(5),-(s(2)-s(4))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
+                                ZExp = [(s(2)-s(4))/2/s(5);2*abs(q)/(s(1)+s(2))/s(7);s(3)*s(4)/s(1)/s(2)];
+                                dZdq = [0;2*sign(q)/(s(1)+s(2))/s(7);0];
+                                dZds = [0,1/2/s(5),0,-1/2/s(5),-(s(2)-s(4))/2/s(5)^2,0,0;-2*abs(q)/(s(1)+s(2))^2/s(7),-2*abs(q)/(s(1)+s(2))^2/s(7),0,0,0,0,-2*abs(q)/(s(1)+s(2))/s(7)^2;-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0,0];
                             end
                         end
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2932,13 +2933,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR2_6.LDh};
                         Co_Table = DuctNetwork.Table_SR2_6.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
-                        ZExp = @(q,s)[s(3)*(s(1)+s(2))/2/s(1)/s(2)];
-                        dZdq = @(q,s)[0];
-                        dZds = @(q,s)[-s(3)/2/s(1)^2,-s(3)/2/s(2)^2,(s(1)+s(2))/2/s(1)/s(2),0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        ZExp = [s(3)*(s(1)+s(2))/2/s(1)/s(2)];
+                        dZdq = 0;
+                        dZds = [-s(3)/2/s(1)^2,-s(3)/2/s(2)^2,(s(1)+s(2))/2/s(1)/s(2),0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2988,13 +2989,13 @@ classdef DuctNetwork < handle
                         %             V = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR3_1.WoW1,DuctNetwork.Table_SR3_1.HW1};
                         Co_Table = DuctNetwork.Table_SR3_1.Co;
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
-                        ZExp = @(q,s)[s(2)/s(3);s(1)/s(3)];
-                        dZdq = @(q,s)[0;0];
-                        dZds = @(q,s)[0,1/s(3),-s(2)/s(3)^2,0;1/s(3),0,-s(1)/s(3)^2,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        ZExp = [s(2)/s(3);s(1)/s(3)];
+                        dZdq = [0;0];
+                        dZds = [0,1/s(3),-s(2)/s(3)^2,0;1/s(3),0,-s(1)/s(3)^2,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -3046,19 +3047,19 @@ classdef DuctNetwork < handle
                         %             Vo = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR4_1.tanTheta,DuctNetwork.Table_SR4_1.AoA1};
                         Co_Table = DuctNetwork.Table_SR4_1.Co;
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         if s(3) > s(1)
-                            ZExp = @(q,s)[(s(3)-s(1))/2/s(4);s(1)/s(3)];
-                            dZdq = @(q,s)[0;0];
-                            dZds = @(q,s)[-1/2/s(4),0,1/2/s(4),-(s(3)-s(1))/2/s(4)^2,0;1/s(3),0,-s(1)/s(3)^2,0,0];
+                            ZExp = [(s(3)-s(1))/2/s(4);s(1)/s(3)];
+                            dZdq = [0;0];
+                            dZds = [-1/2/s(4),0,1/2/s(4),-(s(3)-s(1))/2/s(4)^2,0;1/s(3),0,-s(1)/s(3)^2,0,0];
                         else
-                            ZExp = @(q,s)[(s(1)-s(3))/2/s(4);s(1)/s(3)];
-                            dZdq = @(q,s)[0;0];
-                            dZds = @(q,s)[1/2/s(4),0,-1/2/s(4),-(s(1)-s(3))/2/s(4)^2,0;1/s(3),0,-s(1)/s(3)^2,0,0];
+                            ZExp = [(s(1)-s(3))/2/s(4);s(1)/s(3)];
+                            dZdq = [0;0];
+                            dZds = [1/2/s(4),0,-1/2/s(4),-(s(1)-s(3))/2/s(4)^2,0;1/s(3),0,-s(1)/s(3)^2,0,0];
                         end
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -3258,6 +3259,7 @@ classdef DuctNetwork < handle
                     case 0 %[0,0,0]*[4;2;1], - - -, impossible
                         dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0,0,0];
                 end
+%                     EnterCase=((q>0)*[4;2;1]);
                 dP = dir(1)*dP;dPdQ = dir(1)*dPdQ.*dir;dPdS = dir(1)*dPdS;
             end
         end
@@ -3287,31 +3289,31 @@ classdef DuctNetwork < handle
                         %             V1 = q/s(1)/s(2);
                         GridVec = {DuctNetwork.Table_SR7_17.AoA1,DuctNetwork.Table_SR7_17.tanTheta};
                         Co_Table = DuctNetwork.Table_SR7_17.Co;
-                        gExp = @(q,s)0.5*s(6)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(6)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(6)*q*abs(q)/s(1)^3/s(2)^2,-s(6)*q*abs(q)/s(1)^2/s(2)^3,0,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(6)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(6)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(6)*q*abs(q)/s(1)^3/s(2)^2,-s(6)*q*abs(q)/s(1)^2/s(2)^3,0,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         if abs(s(3)-s(1)) > abs(s(4)-s(2))% use abs(s(3)-s(1)) in Z expression
                             if s(3) > s(1)
-                                ZExp = @(q,s)[s(3)*s(4)/s(1)/s(2);(s(3)-s(1))/2/s(5)];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;-1/2/s(5),0,1/2/s(5),0,-(s(3)-s(1))/2/s(5)^2,0];
+                                ZExp = [s(3)*s(4)/s(1)/s(2);(s(3)-s(1))/2/s(5)];
+                                dZdq = [0;0];
+                                dZds = [-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;-1/2/s(5),0,1/2/s(5),0,-(s(3)-s(1))/2/s(5)^2,0];
                             else
-                                ZExp = @(q,s)[s(3)*s(4)/s(1)/s(2);(s(1)-s(3))/2/s(5)];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;1/2/s(5),0,-1/2/s(5),0,-(s(1)-s(3))/2/s(5)^2,0];
+                                ZExp = [s(3)*s(4)/s(1)/s(2);(s(1)-s(3))/2/s(5)];
+                                dZdq = [0;0];
+                                dZds = [-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;1/2/s(5),0,-1/2/s(5),0,-(s(1)-s(3))/2/s(5)^2,0];
                             end
                         else% use abs(s(4)-s(2)) in Z expression
                             if s(4) > s(2)
-                                ZExp = @(q,s)[s(3)*s(4)/s(1)/s(2);(s(4)-s(2))/2/s(5)];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;0,-1/2/s(5),0,1/2/s(5),-(s(4)-s(2))/2/s(5)^2,0];
+                                ZExp = [s(3)*s(4)/s(1)/s(2);(s(4)-s(2))/2/s(5)];
+                                dZdq = [0;0];
+                                dZds = [-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;0,-1/2/s(5),0,1/2/s(5),-(s(4)-s(2))/2/s(5)^2,0];
                             else
-                                ZExp = @(q,s)[s(3)*s(4)/s(1)/s(2);(s(2)-s(4))/2/s(5)];
-                                dZdq = @(q,s)[0;0];
-                                dZds = @(q,s)[-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;0,1/2/s(5),0,-1/2/s(5),-(s(2)-s(4))/2/s(5)^2,0];
+                                ZExp = [s(3)*s(4)/s(1)/s(2);(s(2)-s(4))/2/s(5)];
+                                dZdq = [0;0];
+                                dZds = [-s(3)*s(4)/s(1)^2/s(2),-s(3)*s(4)/s(1)/s(2)^2,s(4)/s(1)/s(2),s(3)/s(1)/s(2),0,0;0,1/2/s(5),0,-1/2/s(5),-(s(2)-s(4))/2/s(5)^2,0];
                             end
                         end
-                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds, q, s);
+                        [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Co_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -3537,7 +3539,7 @@ classdef DuctNetwork < handle
                     [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                 case 's'
                     Cs_Table = DuctNetwork.Table_ED5_2.Cs;
-                    GridVec = {DuctNetwork.Table_ED5_2.QsQc,DuctNetwork.Table_ED5_2.AbAc,DuctNetwork.ED5_21_Table.AsAc};
+                    GridVec = {DuctNetwork.Table_ED5_2.QsQc,DuctNetwork.Table_ED5_2.AbAc,DuctNetwork.Table_ED5_2.AsAc};
                     ZExp = [q(1)/q(3);(s(2)/s(3))^2;(s(1)/s(3))^2];
                     dZdq = [1/q(3),0,-q(1)/q(3)^2;0,0,0;0,0,0];
                     dZds = [0,0,0,0;0,2*s(2)/s(3)^2,-2*s(2)^2/s(3)^3,0;2*s(1)/s(3)^2,0,-2*s(1)^2/s(3)^3,0];
@@ -3603,16 +3605,18 @@ classdef DuctNetwork < handle
         end
         
         function [dP, dPdQ, dPdS]=ER5_1(q, s, Selection)
-            gExp =  0.5*s(5)*(q(3)/(s(1)*s(4)))^2;
-            dgdq =  [0,0,s(5)*q(3)/(s(1)*s(4))^2];
-            dgds =  [-2/s(1),0,0,-2/s(4),1/s(5)]*gExp;
+            % q=[qs,qb,qc];
+            % s=[H,Ws,Wb,Wc,rho];
+            gExp =  0.5*s(5)*(q(3)/(s(1)*s(4)))^2; % 0.5*rho* Vc^2; Vc = qc/(H*Wc);
+            dgdq =  [0,0,s(5)*q(3)/(s(1)*s(4))^2]; % dgdqs=0; dgdqb=0; dgdqc = rho*qc/(H*Wc)^2
+            dgds =  [-2/s(1),0,0,-2/s(4),1/s(5)]*gExp; % dgdH = -2*g/H; dgdWs=0; dgdWb=0;dgdWc = -2*g/Wc; dgdrho = g/rho;
             switch Selection
                 case 'b'
                     Cb_Table = DuctNetwork.Table_ER5_1.Cb;
                     GridVec = {DuctNetwork.Table_ER5_1.QbQc,DuctNetwork.Table_ER5_1.AbAc,DuctNetwork.Table_ER5_1.AsAc};
-                    ZExp = [q(2)/q(3);s(3)/s(4);s(2)/s(4)];
-                    dZdq = [0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0];
-                    dZds = [0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0];
+                    ZExp = [q(2)/q(3);s(3)/s(4);s(2)/s(4)]; % [qb/qc;Wb/Wc;Ws/Wc]
+                    dZdq = [0,1/q(3),-q(2)/q(3)^2;0,0,0;0,0,0]; % dZ1dqb = 1/qc; dZ1dqc=-qb/qc^2; 
+                    dZds = [0,0,0,0,0;0,0,1/s(4),-s(3)/s(4)^2,0;0,1/s(4),0,-s(2)/s(4)^2,0]; % dZ2dWb = 1/Wc; dZ2dWc = -Wb/Wc^2; dZ3dWs = 1/Wc; dZ3dWc = -Ws/Wc^2
                     [dP, dPdQ, dPdS] = DuctNetwork.Interp_Gradient(GridVec, Cb_Table, ZExp, dZdq, dZds, gExp, dgdq, dgds);
                 case 's'
                     Cs_Table = DuctNetwork.Table_ER5_1.Cs;
@@ -3676,171 +3680,101 @@ classdef DuctNetwork < handle
                     dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0,0,0];
             end
         end
-
+        
         function [f,dfdq,dfds] = Interp_Gradient(GridVector, InterpTable, Z, dZdq, dZds, g, dgdq, dgds)
-            % C = Interpolation(GridVector,InterpTable,Z)
-            % f = g*C
-            % dfdq = g*dCdZ*dZdq + C*dgdq
-            % dfds = g*dCdZ*dZds + C*dgds
-            Coeff_Interpolant = griddedInterpolant(GridVector,InterpTable,'linear','nearest');
-            Z = reshape(Z,1,[]);
-            NZ = length(Z);
-            Cf = Coeff_Interpolant(Z);
-            StepSize = cell(1,NZ);IndexInTable = cell(1,NZ);
-            GridInGrad = cell(1,NZ);
-            for ii = 1:NZ
-                if Z(ii)>GridVector{ii}(end)
-                    IndexInTable{ii}=length(GridVector{ii})*[1;1];
-                    StepSize{ii}=1;
-                    GridInGrad{ii} = [GridVector{ii}(end),Z(ii)];
-                elseif Z(ii)<=GridVector{ii}(1)
-                    IndexInTable{ii}=[1;1];
-                    StepSize{ii}=1;
-                    GridInGrad{ii} = [Z(ii),GridVector{ii}(1)];
-                else
-                    tmp=find(Z(ii)>GridVector{ii},1,'last');
-                    IndexInTable{ii}=[tmp;tmp+1];
-                    StepSize{ii}=GridVector{ii}(tmp+1)-GridVector{ii}(tmp);
-                    GridInGrad{ii} = GridVector{ii}(IndexInTable{ii});
-                end
-            end
-            cell_Grad = cell(1,NZ);
-            if NZ>1
-                [cell_Grad{[2,1,3:end]}] = gradient(InterpTable(IndexInTable{:}),StepSize{[2,1,3:end]});
-                Grad_Interpolant = cellfun(@(G)griddedInterpolant(GridInGrad,G,'linear','nearest'),cell_Grad,'UniformOutput',false);
-                dCfdZ = arrayfun(@(ii)Grad_Interpolant{ii}(Z),1:NZ,'UniformOutput',true);
-            else
-                dCfdZ=(InterpTable(IndexInTable{1}(2))-InterpTable(IndexInTable{1}(1)))/StepSize{1};
-            end
+            [Cf, dCfdZ] = DuctNetwork.InterpolationWithGradient(GridVector, InterpTable, Z);
+%             jac2 = DuctNetwork.Jacobian(@(x)DuctNetwork.InterpolationWithGradient(GridVector, InterpTable, x),Z,1e-6);
+%             jac3 = DuctNetwork.Jacobian(@(x)DuctNetwork.InterpolationWithGradient(GridVector, InterpTable, x),Z,-1e-6);
+%             if norm(jac2+jac3-2*dCfdZ)>1e-3
+%                 dCfdZ
+%                 jac
+%                 jac2
+%                 jac3
+%             end
             f = Cf*g;
             dfdq = g*dCfdZ*dZdq + Cf*dgdq;
             dfds = g*dCfdZ*dZds + Cf*dgds;
         end
         
-        function [f,dfdq,dfds] = Interp_Gradient2(GridVector, InterpTable, Z, dZdq, dZds, g, dgdq, dgds)
-            % C = Interpolation(GridVector,InterpTable,Z)
-            % g = gExp(q,s)
-            % f = g*C
-            % dfdq = g*dCdZ*dZdq + C*dgdq
-            % dfds = g*dCdZ*dZds + C*dgds
-            Z = reshape(Z,1,[]);
-            NZ = length(Z);
-            StepSize = cell(1,NZ);IndexInTable = cell(1,NZ);ZMesh = cell(1,NZ);IndexInMesh = cell(1,NZ);
-            if NZ == 1
-                GridVector = GridVector{1};
-                if Z>=GridVector(end)
-                    Cf = InterpTable(end);
-                    dCfdZ = 0;
-                elseif Z<= GridVector(1)
-                    Cf = InterpTable(1);
-                    dCfdZ = 0;
-                else
-                    IndexInTable = find(Z<=GridVector,1)*[1;1]+[-1;0];
-                    StepSize = range(GridVector(IndexInTable));
-                    lambda = (Z - GridVector(IndexInTable(1)))/StepSize;
-                    Cf = reshape(InterpTable(IndexInTable),1,[])*[1-lambda;lambda];
-                    dCfdZ = range(InterpTable(IndexInTable))/StepSize;
-                end
-            else
-                for ii = 1:NZ
-                    if Z(ii)>GridVector{ii}(end)
-                        IndexInTable{ii}=length(GridVector{ii})*[1;1];
-                        StepSize{ii} = 2*(Z(ii)-GridVector{ii}(end));
-                        ZMesh{ii}=[GridVector{ii}(end);Z(ii);2*Z(ii)-GridVector{ii}(end)];
-                    elseif Z(ii)<=GridVector{ii}(1)
-                        IndexInTable{ii}=[1;1];
-                        StepSize{ii} = -2*(Z(ii)-GridVector{ii}(1));
-                        ZMesh{ii}=[2*Z(ii)-GridVector{ii}(1);Z(ii);GridVector{ii}(1)];
-                    else
-                        IndexInTable{ii}=find(Z(ii)<=GridVector{ii},1)*[1;1]+[-1;0];
-                        StepSize{ii} = range(GridVector{ii}(IndexInTable{ii}));
-                        ZMesh{ii}=[GridVector{ii}(IndexInTable{ii}(1));GridVector{ii}(IndexInTable{ii}(end))];
-                    end
-                    IndexInMesh{ii}=[1;2];
-                end
-                CfMesh = InterpTable(IndexInTable{:});
-                lambda = cellfun(@(v,x)(x-v(1))/(v(2)-v(1)),ZMesh,num2cell(Z));
-                for ii=1:NZ
-                    Index_1 = IndexInMesh; Index_1{ii}=1;
-                    Index_2 = IndexInMesh; Index_2{ii}=2;
-                    Index_3 = IndexInMesh; Index_3{ii}=3;
-                    CfMesh(Index_3{:}) = CfMesh(Index_2{:});
-                    CfMesh(Index_2{:}) = (1-lambda(ii))*CfMesh(Index_1{:}) + lambda(ii)*CfMesh(Index_3{:});
-                    StepSize{ii} = [GridVector{ii}(IndexInTable{ii}(1));Z(ii);GridVector{ii}(IndexInTable{ii}(2))];
-                    IndexInMesh{ii}=[1;2;3];
-                end
-                Index_mid = num2cell(2*ones(1,NZ));
-                Cf=CfMesh(Index_mid{:});
-                cell_Grad = cell(1,NZ);
-                [cell_Grad{[2,1,3:end]}] = gradient(CfMesh,StepSize{[2,1,3:end]});
-                dCfdZ = cellfun(@(M)M(Index_mid{:}),cell_Grad);
-            end
-            f = Cf*g;
-            dfdq = g*dCfdZ*dZdq + Cf*dgdq;
-            dfds = g*dCfdZ*dZds + Cf*dgds;
-        end
-        
-        function [f,dfdq,dfds] = Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds,Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q,s)
-            % Z = ZExp(q,s) 
-            % C = Interpolation(GridVector,InterpTable,Z) 
-            % g = gExp(q,s) 
-            % f = g*C 
-            % dfdq = g*dCdZ*dZdq + C*dgdq
-            % dfds = g*dCdZ*dZds + C*dgds
-            Coeff_Interpolant1 = griddedInterpolant(GridVector1,InterpTable1,'linear','nearest');
-            Z1 = reshape(Z1Exp(q,s),1,[]);
-            NZ1 = length(Z1);
-            Cf1 = Coeff_Interpolant1(Z1);
-            StepSize1 = cell(1,NZ1);IndexInTable1 = cell(1,NZ1);
-            for ii = 1:NZ1
-                if Z1(ii)>GridVector1{ii}(end)
-                    IndexInTable1{ii}=length(GridVector1{ii})*[1;1];
-                    StepSize1{ii}=1;
-                elseif Z1(ii)<=GridVector1{ii}(1)
-                    IndexInTable1{ii}=[1;1];
-                    StepSize1{ii}=1;
-                else
-                    tmp=find(Z1(ii)>GridVector1{ii},1,'last');
-                    IndexInTable1{ii}=[tmp;tmp+1];
-                    StepSize1{ii}=GridVector1{ii}(tmp+1)-GridVector1{ii}(tmp);
-                end
-            end
-            cell_Grad1 = cell(1,NZ1);
-            [cell_Grad1{:}] = gradient(InterpTable1(IndexInTable1{:}),StepSize1{:});
-            dCf1dZ1 = cellfun(@(M)M(1),cell_Grad1,'UniformOutput',true);
-            dZ1dq = dZ1dq(q,s);
-            dZ1ds = dZ1ds(q,s);
-            
-            Coeff_Interpolant2 = griddedInterpolant(GridVector2,InterpTable2,'linear','nearest');
-            Z2 = reshape(Z2Exp(q,s),1,[]);
-            NZ2 = length(Z2);
-            Cf2 = Coeff_Interpolant2(Z2);
-            StepSize2 = cell(1,NZ2);IndexInTable2 = cell(1,NZ2);
-            for ii = 1:NZ2
-                if Z2(ii)>GridVector2{ii}(end)
-                    IndexInTable2{ii}=length(GridVector2{ii})*[1;1];
-                    StepSize2{ii}=1;
-                elseif Z2(ii)<=GridVector2{ii}(1)
-                    IndexInTable2{ii}=[1;1];
-                    StepSize2{ii}=1;
-                else
-                    tmp=find(Z2(ii)>GridVector2{ii},1,'last');
-                    IndexInTable2{ii}=[tmp;tmp+1];
-                    StepSize2{ii}=GridVector2{ii}(tmp+1)-GridVector2{ii}(tmp);
-                end
-            end
-            cell_Grad2 = cell(1,NZ2);
-            [cell_Grad2{:}] = gradient(InterpTable2(IndexInTable2{:}),StepSize2{:});
-            dCf2dZ2 = cellfun(@(M)M(1),cell_Grad2,'UniformOutput',true);
-            dZ2dq = dZ2dq(q,s);
-            dZ2ds = dZ2ds(q,s);
-            
-            g = gExp(q,s);
-            dgdq = dgdq(q,s);
-            dgds = dgds(q,s);
+        function [f,dfdq,dfds] = Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1, dZ1dq, dZ1ds,Z2, dZ2dq, dZ2ds, g, dgdq, dgds)
+            [Cf1, dCf1dZ1] = DuctNetwork.InterpolationWithGradient(GridVector1, InterpTable1, Z1);
+            [Cf2, dCf2dZ2] = DuctNetwork.InterpolationWithGradient(GridVector2, InterpTable2, Z2);
             f = g*Cf1*Cf2;
             dfdq = g*Cf2*dCf1dZ1*dZ1dq + g*Cf1*dCf2dZ2*dZ2dq + Cf1*Cf2*dgdq;
             dfds = g*Cf2*dCf1dZ1*dZ1ds + g*Cf1*dCf2dZ2*dZ2ds + Cf1*Cf2*dgds;
         end
+        
+        function dfdX = Jacobian(f,X0,h)
+            dfdX = cell2mat(cellfun(@(x)(f(X0(:)+x)-f(X0))/h,num2cell(h*eye(length(X0)),1),'UniformOutput',false));
+        end
+        
+        function [Cf, dCfdZ] = InterpolationWithGradient(GridVector, InterpTable, Z)
+            Z = reshape(Z,1,[]);
+            NZ = length(Z);
+            dCfdZ = zeros(1,NZ);
+            n = cellfun(@length,GridVector);
+            CfIdxInTable = cell(1,NZ);ZMesh = cell(1,NZ);IndexInMesh = cell(1,NZ);lambda = zeros(1,NZ);
+            b_Interp = true(1,NZ);
+            for ii = 1:NZ
+                if Z(ii)>GridVector{ii}(end)
+                    CfIdxInTable{ii}=n(ii)*[1;1;1];
+                    ZMesh{ii}=GridVector{ii}(end)*[1;0;-1]+Z(ii)*[0;1;2];
+                    b_Interp(ii) = false;
+                    IndexInMesh{ii}=[1;2;3];
+                elseif Z(ii)<GridVector{ii}(1)
+                    CfIdxInTable{ii}=[1;1;1];
+                    ZMesh{ii}=GridVector{ii}(1)*[-1;0;1]+Z(ii)*[2;1;0];
+                    b_Interp(ii) = false;
+                    IndexInMesh{ii}=[1;2;3];
+                elseif any(Z(ii)==GridVector{ii})
+                    ZLocation = find(Z(ii)==GridVector{ii},1);
+                    if ZLocation==1
+                        CfIdxInTable{ii}=[1;1;2];
+                        ZMesh{ii}=reshape(GridVector{ii}(CfIdxInTable{ii}),[],1)-[1;0;0];
+                        b_Interp(ii) = false;
+                        IndexInMesh{ii}=[1;2;3];
+                    elseif ZLocation==n(ii)
+                        CfIdxInTable{ii}=n(ii)*[1;1;1]-[1;0;0];
+                        ZMesh{ii}=reshape(GridVector{ii}(CfIdxInTable{ii}),[],1)+[0;0;1];
+                        b_Interp(ii) = false;
+                        IndexInMesh{ii}=[1;2;3];
+                    else
+                        CfIdxInTable{ii}=ZLocation*[1;1;1]+[-1;0;1];
+                        ZMesh{ii}=reshape(GridVector{ii}(CfIdxInTable{ii}),[],1);
+                        b_Interp(ii) = false;
+                        IndexInMesh{ii}=[1;2;3];
+                    end
+                else
+                    CfIdxInTable{ii}=find(Z(ii)<GridVector{ii},1)*[1;1]+[-1;0];
+                    ZMesh{ii}=reshape(GridVector{ii}(CfIdxInTable{ii}),[],1);
+                    lambda(ii) = (Z(ii)-ZMesh{ii}(1))/range(ZMesh{ii});
+                    IndexInMesh{ii}=[1;2];
+                end
+            end
+            CfMesh = InterpTable(CfIdxInTable{:});
+            for ii=find(b_Interp)
+                Index_1 = IndexInMesh; Index_1{ii}=1;
+                Index_2 = IndexInMesh; Index_2{ii}=2;
+                Index_3 = IndexInMesh; Index_3{ii}=3;
+                CfMesh(Index_3{:}) = CfMesh(Index_2{:});
+                CfMesh(Index_2{:}) = (1-lambda(ii))*CfMesh(Index_1{:}) + lambda(ii)*CfMesh(Index_3{:});
+                ZMesh{ii} = [ZMesh{ii}(1); Z(ii);ZMesh{ii}(2)];
+                IndexInMesh{ii}=[1;2;3];
+            end
+            Index_mid = num2cell(2*ones(1,NZ));
+            Cf=CfMesh(Index_mid{:});
+            for ii = 1:NZ
+                Index_up = Index_mid; Index_up{ii}=3;
+                Index_low = Index_mid; Index_low{ii}=1;
+                dCfdZ(ii)=(CfMesh(Index_up{:})-Cf)/(ZMesh{ii}(3)-ZMesh{ii}(2))/2+(CfMesh(Index_low{:})-Cf)/(ZMesh{ii}(1)-ZMesh{ii}(2))/2;
+            end
+            
+%             cell_Grad = cell(1,NZ);
+%             if NZ>1, ZMesh([2,1])=ZMesh([1,2]);end;
+%             [cell_Grad{:}] = gradient(CfMesh,ZMesh{:});
+%             if NZ>1, cell_Grad([2,1])=cell_Grad([1,2]);end;
+%             dCfdZ = cellfun(@(M)M(Index_mid{:}),cell_Grad);
+        end
+                    
     end
 end

@@ -39,7 +39,7 @@ duct.AddFitting(9,'CircularDarcyWeisbach',[2.1+rand,0.2]);
 duct.AddFitting([1,2,3],'CircularTJunction',[0.3,0.3,0.2]);
 
 %%
-N=1;
+N=100;
 for ii=1:N
     disp(ii)
     duct.Sim();
