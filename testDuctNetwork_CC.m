@@ -7,12 +7,18 @@ duct.AddBranch(1,0);
 duct.AddFitting([1,2,3],'SR5_13_Junction',[0.2,0.3,0.2,0.1,0.2,0.2]);
 [X,Q,P]=duct.Sim();
 %%
-h=1e-6;
-X0 = [0.9;0.22];
+h=1e-8;
+%X0 = [0.88;0.22];
+X0 = rand(2,1);
 Branch = 3;
 [dP,dPdQ,dPdS]=duct.BranchPressureDrop(Branch,X0,duct.S);
-dP1 = duct.BranchPressureDrop(Branch,(X0+[h;0]),duct.S);
-dP2 = duct.BranchPressureDrop(Branch,(X0+[0;h]),duct.S);
-dP0dQ = [(dP1-dP)/h,(dP2-dP)/h];
-dPdQ
-dP0dQ
+
+% dP1 = duct.BranchPressureDrop(Branch,(X0+[h;0]),duct.S);
+% dP2 = duct.BranchPressureDrop(Branch,(X0+[0;h]),duct.S);
+% dP0dQ = [(dP1-dP)/h,(dP2-dP)/h]
+% % dPdQ-dP0dQ
+% 
+% jac = jacobianest(@(x)duct.BranchPressureDrop(Branch,x,duct.S), X0)
+% dP0dQ
+% dPdQ
+% % dPdQ-jac
