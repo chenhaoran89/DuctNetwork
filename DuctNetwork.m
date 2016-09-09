@@ -495,7 +495,7 @@ classdef DuctNetwork < handle
                 query = {query};
             end
             varargout = cell(1,nargout);
-            [varargout{:}] = DuctNetwork.PressureSource (query, varargin{:});
+            [varargout{:}] = DuctNetwork.PressureSource(query, varargin{:});
         end
 
         function varargout = DuctQuadratic(query, varargin)
@@ -545,7 +545,7 @@ classdef DuctNetwork < handle
                 query = {query};
             end
             varargout = cell(1,nargout);
-            [varargout{:}] = DuctNetwork.CircularDarcyWeisbachHaaland (query, varargin{:});
+            [varargout{:}] = DuctNetwork.CircularDarcyWeisbachHaaland(query, varargin{:});
         end
         
         function varargout = CircularDarcyWeisbachHaaland(query, varargin)
@@ -571,9 +571,10 @@ classdef DuctNetwork < handle
                         e = s(4);
                         nu = s(5);
                         
-                        Area = pi*(D/2)^2;
-                        V = q/Area;
-                        Re = abs(V)*D/nu;
+%                       Area = pi*(D/2)^2;
+%                       V = q/Area;
+%                       Re = abs(V)*D/nu;
+                        Re = 4*abs(q)/nu/pi/D;
                         
                         lambda = 1/(1+exp(-(Re-3750)/250));
                         Cf_lam = 64/Re;
@@ -581,24 +582,24 @@ classdef DuctNetwork < handle
                         B = (6.9/Re)^3;
                         T = log10(A+B);
                         Cf_turb = (-0.6*T)^(-2);
-                        Cf = (1-lambda)*Cf_lam+lambda*Cf_turb;
-                        T5 = L/D*rho*abs(V);
-                        % dP = Cf*L/D*rho/2*V*abs(V);
-                        dP = Cf*T5*V/2;
+                        Cf = (1-lambda)*Cf_lam + lambda*Cf_turb;
+                      % M = L/D/2*rho*V*abs(V);
+                        M = 8*L*rho/D^5/pi^2*q*abs(q);
+                        dP = Cf*M;
                         varargout{ii}=dP;
                     case 'dPdQ'
 %                         if (~exist('dP','var'))
 %                             DataInitiation();
 %                         end;
-                        dCf_lamdabsq = -16*nu*pi*D/q^2;
 %                         if (~exist('dCf_turbdAB','var'))
 %                             dCf_turbdAB = -1/0.18/T^3/log(10)/(A+B);
 %                         end;
-                        dCf_turbdAB = -1/0.18/T^3/log(10)/(A+B);
+                        dCf_lamdabsq = -Cf_lam/abs(q);
+                        dCf_turbdAB = -2*Cf_turb/T/log(10)/(A+B);
                         dCf_turbdabsq = -dCf_turbdAB*3*B/abs(q);
-                        dlambdadabsq = lambda*(1-lambda)/250*4/nu/pi/D;
-                        dCfdq = dCf_lamdabsq*(1-lambda) + lambda*dCf_turbdabsq + (Cf_turb-Cf_lam)*dlambdadabsq;
-                        dPdq = T5*(Cf/Area+abs(V)/2*dCfdq);
+                        dlambdadabsq = lambda*(1-lambda)/250*Re/abs(q);
+                        dCfdabsq = (Cf_turb-Cf_lam)*dlambdadabsq + (1-lambda)*dCf_lamdabsq + lambda*dCf_turbdabsq;
+                        dPdq = M*(dCfdabsq*sign(q)+2*Cf/q);
                         varargout{ii}=dPdq;
                     case 'dPdS'
 %                         if (~exist('dP','var'))
@@ -610,14 +611,17 @@ classdef DuctNetwork < handle
                         dPdL = dP/L;
                         dCf_lamdD = Cf_lam/D;
                         dCf_turbdD = dCf_turbdAB*(-3.33*A+3*B)/D;
-                        dlambdadD = -lambda*(1-lambda)*Re/D;
-                        dCfdD = dCf_lamdD*(1-lambda) + lambda*dCf_turbdD + (Cf_turb-Cf_lam)*dlambdadD;
-                        dPdD = -4*dP/D+dP/Cf*dCfdD;
+                        dlambdadD = -lambda*(1-lambda)/250*Re/D;
+                        dCfdD = (Cf_turb-Cf_lam)*dlambdadD + (1-lambda)*dCf_lamdD + lambda*dCf_turbdD;
+                        dPdD = M*(dCfdD-5*Cf/D);
                         dPdrho = dP/rho;
                         dCf_turbde = dCf_turbdAB*3.33*A/e;
-                        dPde = dP/Cf*lambda*dCf_turbde;
-                        dCfdnu = lambda*(1-lambda)/nu*(Cf_lam/lambda+dCf_turbdAB*3*B/(1-lambda)-(Cf_turb-Cf_lam)*Re);
-                        dPdnu = dP/Cf*dCfdnu;
+                        dPde = M*lambda*dCf_turbde;
+                        dCf_lamdnu = Cf_lam/nu;
+                        dCf_turbdnu = dCf_turbdAB*3*B/nu;
+                        dlambdadnu = -lambda*(1-lambda)/250*Re/nu;
+                        dCfdnu = (Cf_turb-Cf_lam)*dlambdadnu + (1-lambda)*dCf_lamdnu + lambda*dCf_turbdnu;
+                        dPdnu = M*dCfdnu;
                         varargout{ii}=[dPdL, dPdD, dPdrho, dPde, dPdnu];
                     case 'Model_Description'
                         varargout{ii}='Circular Straight Duct Using Darcy Weisbach Equation by Haaland Approximation';
@@ -661,42 +665,51 @@ classdef DuctNetwork < handle
                         e = s(4);
                         nu = s(5);
                         
-                        Area = pi*(D/2)^2;
-                        V = q/Area;
-                        Re =abs(V)*D/nu;
-                        T21 = power((7/Re),0.9);
-                        T2 = T21 +(0.27*e/D);
-                        T1 = -2.457*log(T2);
-                        A = T1^16;
+%                       Area = pi*(D/2)^2;
+%                       V = q/Area;
+%                       Re = abs(V)*D/nu;
+                        Re = 4*abs(q)/nu/pi/D;
+                        
+                        T1 = power((7/Re),0.9);
+                        T2 = T1 +(0.27*e/D);
+                        T3 = -2.457*log(T2);
+                        A = T3^16;
                         B = power((37530/Re),16);
-                        T3 = power((8/Re),12);
-                        T4 = 1/power(A+B,1.5);
-                        Cf = 8*power(T3+T4,1/12);
-                        T5 = L/D*rho*abs(V);
-                        dP = Cf*T5/2*V;
+                        T4 = power((8/Re),12);
+                        T5 = power(A+B,-1.5);
+                        Cf = 8*power(T4+T5,1/12);
+                      % M = L/D/2*rho*V*abs(V);
+                        M = 8*L*rho/D^5/pi^2*q*abs(q);
+                        dP = Cf*M;
                         varargout{ii}=dP;
                     case 'dPdQ'
-                        dAdq = 35.3808*T1^15*T21/T2/abs(q);
-                        dBdq = -16*B/abs(q);
-                        dCfdq = Cf/(T3+T4)*(-T3/abs(q)-(dAdq+dBdq)/8/(A+B)^2.5);
-                        dPdq = T5*(Cf/Area+abs(V)/2*dCfdq);
+                        dAdabsq = 35.3808*A/T3/T2*T1/abs(q);
+                        dBdabsq = -16*B/abs(q);
+                        dT4dabsq = -12*T4/abs(q);
+                        dT5dabsq = -1.5*T5/(A+B)*(dAdabsq+dBdabsq);
+                        dCfdabsq = 1/12*Cf/(T4+T5)*(dT4dabsq+dT5dabsq);
+                        dPdq = M*(dCfdabsq*sign(q)+2*Cf/q);
                         varargout{ii}=dPdq;
                     case 'dPdS'
-                        dAdT2 = -2.457*16*A/T1/T2;
-                        dAdD = dAdT2*(0.9*T21-0.27*e/D)/D;
-                        dBdD = 16*B/D;
-                        G = Cf/12/(T3+T4);
-                        H1 = 12*T3;
-                        H2 = 1.5/(A+B)^2.5;
-                        dPdrho = dP/rho;
                         dPdL = dP/L;
-                        dCfdD = G*(H1/D-H2*(dAdD+dBdD));
-                        dPdD = dP*(dCfdD/Cf-5/D);
-                        dAdnu = dAdT2*(0.9*T21/nu);
+                        dT4dD = 12*T4/D;
+                        dAdD = -2.457*16*A/T3/T2*(0.9*T1/D-0.27*e/D^2);
+                        dBdD = 16*B/D;
+                        dT5dD = -1.5*T5/(A+B)*(dAdD+dBdD);
+                        dCfdD = 1/12*Cf/(T4+T5)*(dT4dD+dT5dD);
+                        dPdD = M*(dCfdD-5*Cf/D);
+                        dPdrho = dP/rho;
+                        % dAde = -2.457*16*0.27*A/T3/T2/D;
+                        % dT5de = -1.5*T5/(A+B)*dAde;
+                        % dCfde = 1/12*Cf/(T4+T5)*dT5de;
+                        % dPde = M*dCfde;
+                        dPde = 1.32678*dP*T3^15/T2/(T4+T5)/(A+B)^2.5/D;
+                        dT4dnu = 12*T4/nu;
+                        dAdnu = -2.457*16*0.9*A/T3/T2*T1/nu;
                         dBdnu = 16*B/nu;
-                        dCfdnu = G*(H1/nu-H2*(dAdnu+dBdnu));
-                        dPdnu = dP/Cf*dCfdnu;
-                        dPde = 1.32678*dP*T1^15/T2/(T3+T4)/(A+B)^2.5/D;
+                        dT5dnu = -1.5*T5/(A+B)*(dAdnu+dBdnu);
+                        dCfdnu = 1/12*Cf/(T4+T5)*(dT4dnu+dT5dnu);
+                        dPdnu = M*dCfdnu;
                         dPds = [dPdL, dPdD, dPdrho, dPde, dPdnu];
                         varargout{ii}=dPds;
                     case 'Model_Description'
@@ -721,6 +734,215 @@ classdef DuctNetwork < handle
             end
         end
         
+        function varargout = RectangularDarcyWeisbach(query, varargin)
+            if ischar(query)
+                query = {query};
+            end
+            varargout = cell(1,nargout);
+            [varargout{:}] = DuctNetwork.RectangularDarcyWeisbachHaaland(query, varargin{:});
+        end
+        
+        function varargout = RectangularDarcyWeisbachHaaland(query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {};return
+            end
+            varargout = cell(1,n);
+            for ii = 1:nargout
+                switch query{ii}
+                    case 'Pdrop'
+                        q = varargin{1};
+                        s = varargin{2};
+                        L = s(1);
+                        H = s(2);
+                        W = s(3);
+                        Dh = 1.3*H^0.625*W^0.625/(H+W)^0.25;
+                        rho = s(4);
+                        e = s(5);
+                        nu = s(6);
+                        % Re = abs(V)*Dh/nu;
+                        Re = abs(q)*Dh/H/W/nu;
+                        
+                        lambda = 1/(1+exp(-(Re-3750)/250));
+                        Cf_lam = 64/Re;
+                        A = (e/3.7/Dh)^3.33;
+                        B = (6.9/Re)^3;
+                        T = log10(A+B);
+                        Cf_turb = (-0.6*T)^(-2);
+                        Cf = (1-lambda)*Cf_lam + lambda*Cf_turb;
+                        % M = L/Dh/2*rho*V*abs(V);
+                        M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
+                        dP = Cf*M;
+                        varargout{ii}=dP;
+                    case 'dPdQ'
+                        dCf_lamdabsq = -Cf_lam/abs(q);
+                        dCf_turbdAB = -2*Cf_turb/T/log(10)/(A+B);
+                        dCf_turbdabsq = -dCf_turbdAB*3*B/abs(q);
+                        dlambdadabsq = lambda*(1-lambda)/250*Re/abs(q);
+                        dCfdabsq = (Cf_turb-Cf_lam)*dlambdadabsq + (1-lambda)*dCf_lamdabsq + lambda*dCf_turbdabsq;
+                        dPdq = M*(dCfdabsq*sign(q)+2*Cf/q);
+                        varargout{ii}=dPdq;
+                    case 'dPdS'
+                        dPdL = dP/L;
+                        Kh = 0.625/H-0.25/(H+W);
+                        % dDhdH = Dh*Kh;
+                        dRedH  = Re*Kh;
+                        dCf_lamdH = -Cf_lam*Kh;
+                        dAdH = -3.33*A*Kh;
+                        dBdH = -3*B*Kh;
+                        dCf_turbdH = dCf_turbdAB*(dAdH+dBdH);
+                        dlambdadH = lambda*(1-lambda)/250*dRedH;
+                        dCfdH = (Cf_turb-Cf_lam)*dlambdadH + (1-lambda)*dCf_lamdH + lambda*dCf_turbdH;
+                        dMdH = M*(0.25/(H+W)-2.625/H);
+                        dPdH = dCfdH*M+Cf*dMdH;
+                        Kw = 0.625/W-0.25/(H+W);
+                        % dDhdW = Dh*Kw;
+                        dRedW  = Re*Kw;
+                        dCf_lamdW = -Cf_lam*Kw;
+                        dAdW = -3.33*A*Kw;
+                        dBdW = -3*B*Kw;
+                        dCf_turbdW = dCf_turbdAB*(dAdW+dBdW);
+                        dlambdadW = lambda*(1-lambda)/250*dRedW;
+                        dCfdW = (Cf_turb-Cf_lam)*dlambdadW + (1-lambda)*dCf_lamdW + lambda*dCf_turbdW;
+                        dMdW = M*(0.25/(H+W)-2.625/W);
+                        dPdW = dCfdW*M+Cf*dMdW;
+                        dPdrho = dP/rho;
+                        dCf_turbde = dCf_turbdAB*3.33*A/e;
+                        dPde = M*lambda*dCf_turbde;
+                        dCf_lamdnu = Cf_lam/nu;
+                        dCf_turbdnu = dCf_turbdAB*3*B/nu;
+                        dlambdadnu = -lambda*(1-lambda)/250*Re/nu;
+                        dCfdnu = (Cf_turb-Cf_lam)*dlambdadnu + (1-lambda)*dCf_lamdnu + lambda*dCf_turbdnu;
+                        dPdnu = M*dCfdnu;
+                        varargout{ii}=[dPdL, dPdH, dPdW, dPdrho, dPde, dPdnu];
+                    case 'Model_Description'
+                        varargout{ii}='Rectangular Straight Duct Using Darcy Weisbach Equation by Haaland Approximation';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.RectangularDarcyWeisbach};
+                    case 'Branch_Assignment'
+                        varargout{ii}={1};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:6};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Length(m)','Height(m)','Width(m)','Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true,true,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[1,0,0,0,0,0];
+                    otherwise
+                        varargout{ii}=[];
+                end
+            end
+        end
+        
+        function varargout = RectangularDarcyWeisbachChurchill(query, varargin)
+            if ischar(query)
+                n=1; query = {query};
+            elseif iscell(query)
+                n = length(query);
+            else
+                varargout = {};return
+            end
+            varargout = cell(1,n);
+            for ii = 1:n
+                switch query{ii}
+                    case 'Pdrop'
+                        q = varargin{1};
+                        s = varargin{2};
+                        L = s(1);
+                        H = s(2);
+                        W = s(3);
+                        Dh = 1.3*H^0.625*W^0.625/(H+W)^0.25;
+                        rho = s(4);
+                        e = s(5);
+                        nu = s(6);
+                        % Re = abs(V)*Dh/nu;
+                        Re = abs(q)*Dh/H/W/nu;
+                        
+                        T1 = power((7/Re),0.9);
+                        T2 = T1 +(0.27*e/Dh);
+                        T3 = -2.457*log(T2);
+                        A = T3^16;
+                        B = power((37530/Re),16);
+                        T4 = power((8/Re),12);
+                        T5 = power(A+B,-1.5);
+                        Cf = 8*power(T4+T5,1/12);
+                        % M = L/Dh/2*rho*V*abs(V);
+                        M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
+                        dP = Cf*M;
+                        varargout{ii}=dP;
+                    case 'dPdQ'
+                        dAdabsq = 35.3808*A/T3/T2*T1/abs(q);
+                        dBdabsq = -16*B/abs(q);
+                        dT4dabsq = -12*T4/abs(q);
+                        dT5dabsq = -1.5*T5/(A+B)*(dAdabsq+dBdabsq);
+                        dCfdabsq = 1/12*Cf/(T4+T5)*(dT4dabsq+dT5dabsq);
+                        dPdq = M*(dCfdabsq*sign(q)+2*Cf/q);
+                        varargout{ii}=dPdq;
+                    case 'dPdS'
+                        dPdL = dP/L;
+                        Kh = 0.625/H-0.25/(H+W);
+                        % dDhdH = Dh*Kh;
+                        dRedH  = Re*Kh;
+                        dT4dH = -12*T4*Kh;
+                        dT2dH = -0.9*T1*Kh+0.27*e/Dh*(0.25/(H+W)-0.625/H);
+                        dAdH = -2.457*16*A/T3/T2*dT2dH;
+                        dBdH = -16*B*Kh;
+                        dT5dH = -1.5*T5/(A+B)*(dAdH+dBdH);
+                        dCfdH = 1/12*Cf/(T4+T5)*(dT4dH+dT5dH);
+                        dMdH = M*(0.25/(H+W)-2.625/H);
+                        dPdH = dCfdH*M+Cf*dMdH;
+                        Kw = 0.625/H-0.25/(H+W);
+                        % dDhdW = Dh*Kw;
+                        dRedW  = Re*Kw;
+                        dT4dW = -12*T4*Kw;
+                        dT2dW = -0.9*T1*Kw+0.27*e/Dh*(0.25/(H+W)-0.625/W);
+                        dAdW = -2.457*16*A/T3/T2*dT2dW;
+                        dBdW = -16*B*Kw;
+                        dT5dW = -1.5*T5/(A+B)*(dAdW+dBdW);
+                        dCfdW = 1/12*Cf/(T4+T5)*(dT4dW+dT5dW);
+                        dMdW = M*(0.25/(H+W)-2.625/W);
+                        dPdW = dCfdW*M+Cf*dMdW;
+                        dPdrho = dP/rho;
+                        % dAde = -2.457*16*0.27*A/T3/T2/D;
+                        % dT5de = -1.5*T5/(A+B)*dAde;
+                        % dCfde = 1/12*Cf/(T4+T5)*dT5de;
+                        % dPde = M*dCfde;
+                        dPde = 1.32678*dP*T3^15/T2/(T4+T5)/(A+B)^2.5/D;
+                        dT4dnu = 12*T4/nu;
+                        dAdnu = -2.457*16*0.9*A/T3/T2*T1/nu;
+                        dBdnu = 16*B/nu;
+                        dT5dnu = -1.5*T5/(A+B)*(dAdnu+dBdnu);
+                        dCfdnu = 1/12*Cf/(T4+T5)*(dT4dnu+dT5dnu);
+                        dPdnu = M*dCfdnu;
+                        varargout{ii}=[dPdL, dPdH, dPdW, dPdrho, dPde, dPdnu];
+                    case 'Model_Description'
+                        varargout{ii}='Rectangular Straight Duct Using Darcy Weisbach Equation by Churchill Approximation';
+                    case 'Is_Junction'
+                        varargout{ii}=false;
+                    case 'Get_Branches'
+                        varargout{ii}={@DuctNetwork.RectangularDarcyWeisbach};
+                    case 'Branch_Assignment'
+                        varargout{ii}={1};
+                    case 'Parameter_Assignment'
+                        varargout{ii}={1:6};
+                    case 'Parameter_Description'
+                        varargout{ii}={'Length(m)','Height(m)','Width(m)','Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'};
+                    case 'Is_Shared_Parameter'
+                        varargout{ii}=[false,false,false,true,true,true];
+                    case 'Is_Identified_Parameter'
+                        varargout{ii}=[1,0,0,0,0,0];
+                    otherwise
+                        varargout{ii}=[];
+                end
+            end
+        end
+
         function varargout = CircularTJunction(query, varargin)
             if ischar(query)
                 n=1; query = {query};
