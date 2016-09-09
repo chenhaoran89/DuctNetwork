@@ -1939,20 +1939,20 @@ classdef DuctNetwork < handle
                         %             rho = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         GridVector1 = {DuctNetwork.Table_CR3_1.HW,DuctNetwork.Table_CR3_1.rW};
                         InterpTable1 = DuctNetwork.Table_CR3_1.Cp;
-                        Z1Exp = @(q,s)[s(1)/s(2);s(3)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
+                        Z1Exp = [s(1)/s(2);s(3)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_1.Theta};
                         InterpTable2 = DuctNetwork.Table_CR3_1.K;
-                        Z2Exp = @(q,s)[s(4)];
-                        dZ2dq = @(q,s)[0];
-                        dZ2ds = @(q,s)[0,0,0,1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = s(4);
+                        dZ2dq = 0;
+                        dZ2ds = [0,0,0,1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2001,20 +2001,20 @@ classdef DuctNetwork < handle
                         %             rho = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(5)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
+                        gExp = 0.5*s(5)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(5)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(5)*q*abs(q)/s(1)^3/s(2)^2,-s(5)*q*abs(q)/s(1)^2/s(2)^3,0,0,0.5*q*abs(q)/s(1)^2/s(2)^2];
                         GridVector1 = {DuctNetwork.Table_CR3_3.HW,DuctNetwork.Table_CR3_3.rW};
                         InterpTable1 = DuctNetwork.Table_CR3_3.Cp;
-                        Z1Exp = @(q,s)[s(1)/s(2);s(3)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
+                        Z1Exp = [s(1)/s(2);s(3)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [1/s(2),-s(1)/s(2)^2,0,0,0;0,0,1,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_3.Theta};
                         InterpTable2 = DuctNetwork.Table_CR3_3.K;
-                        Z2Exp = @(q,s)[s(4)];
-                        dZ2dq = @(q,s)[0];
-                        dZ2ds = @(q,s)[0,0,0,1,0];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = s(4);
+                        dZ2dq = 0;
+                        dZ2ds = [0,0,0,1,0];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -2165,20 +2165,20 @@ classdef DuctNetwork < handle
                         %             nu = s(5);
                         %             Area = s(1)*s(2);
                         %             V = q/s(1)/s(2);
-                        gExp = @(q,s)0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
-                        dgdq = @(q,s)s(4)*abs(q)/s(1)^2/s(2)^2;
-                        dgds = @(q,s)[-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
+                        gExp = 0.5*s(4)*q*abs(q)/s(1)^2/s(2)^2;
+                        dgdq = s(4)*abs(q)/s(1)^2/s(2)^2;
+                        dgds = [-s(4)*q*abs(q)/s(1)^3/s(2)^2,-s(4)*q*abs(q)/s(1)^2/s(2)^3,0,0.5*q*abs(q)/s(1)^2/s(2)^2,0];
                         GridVector1 = {DuctNetwork.Table_CR3_17.LW,DuctNetwork.Table_CR3_17.HW};
                         InterpTable1 = DuctNetwork.Table_CR3_17.Cp;
-                        Z1Exp = @(q,s)[s(3)/s(2);s(1)/s(2)];
-                        dZ1dq = @(q,s)[0;0];
-                        dZ1ds = @(q,s)[0,-s(3)/s(2)^2,1/s(2),0,0;1/s(2),-s(1)/s(2)^2,0,0,0];
+                        Z1Exp = [s(3)/s(2);s(1)/s(2)];
+                        dZ1dq = [0;0];
+                        dZ1ds = [0,-s(3)/s(2)^2,1/s(2),0,0;1/s(2),-s(1)/s(2)^2,0,0,0];
                         GridVector2 = {DuctNetwork.Table_CR3_17.Re};
                         InterpTable2 = DuctNetwork.Table_CR3_17.Kr;
-                        Z2Exp = @(q,s)[2*abs(q)/(s(1)+s(2))/s(5)];
-                        dZ2dq = @(q,s)[2*sign(q)/(s(1)+s(2))/s(5)];
-                        dZ2ds = @(q,s)[-2*abs(q)/(s(1)+s(2))^2/s(5),-2*abs(q)/(s(1)+s(2))^2/s(5),0,0,-2*abs(q)/(s(1)+s(2))/s(5)^2];
-                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q, s);
+                        Z2Exp = 2*abs(q)/(s(1)+s(2))/s(5);
+                        dZ2dq = 2*sign(q)/(s(1)+s(2))/s(5);
+                        dZ2ds = [-2*abs(q)/(s(1)+s(2))^2/s(5),-2*abs(q)/(s(1)+s(2))^2/s(5),0,0,-2*abs(q)/(s(1)+s(2))/s(5)^2];
+                        [dP, dPdQ, dPdS] = DuctNetwork.Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds, Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds);
                         varargout{ii}=dP;
                     case 'dPdQ'
                         varargout{ii}=dPdQ;
@@ -3679,46 +3679,6 @@ classdef DuctNetwork < handle
                     dP = 0;dPdQ = [0,0,0];dPdS = [0,0,0,0,0,0,0];
             end
         end
-
-        function [f,dfdq,dfds] = Interp_Gradient1(GridVector, InterpTable, Z, dZdq, dZds, g, dgdq, dgds)
-            % C = Interpolation(GridVector,InterpTable,Z)
-            % f = g*C
-            % dfdq = g*dCdZ*dZdq + C*dgdq
-            % dfds = g*dCdZ*dZds + C*dgds
-            Coeff_Interpolant = griddedInterpolant(GridVector,InterpTable,'linear','nearest');
-            Z = reshape(Z,1,[]);
-            NZ = length(Z);
-            Cf = Coeff_Interpolant(Z);
-            StepSize = cell(1,NZ);IndexInTable = cell(1,NZ);
-            GridInGrad = cell(1,NZ);
-            for ii = 1:NZ
-                if Z(ii)>GridVector{ii}(end)
-                    IndexInTable{ii}=length(GridVector{ii})*[1;1];
-                    StepSize{ii}=1;
-                    GridInGrad{ii} = [GridVector{ii}(end),Z(ii)];
-                elseif Z(ii)<=GridVector{ii}(1)
-                    IndexInTable{ii}=[1;1];
-                    StepSize{ii}=1;
-                    GridInGrad{ii} = [Z(ii),GridVector{ii}(1)];
-                else
-                    tmp=find(Z(ii)>GridVector{ii},1,'last');
-                    IndexInTable{ii}=[tmp;tmp+1];
-                    StepSize{ii}=GridVector{ii}(tmp+1)-GridVector{ii}(tmp);
-                    GridInGrad{ii} = GridVector{ii}(IndexInTable{ii});
-                end
-            end
-            cell_Grad = cell(1,NZ);
-            if NZ>1
-                [cell_Grad{[2,1,3:end]}] = gradient(InterpTable(IndexInTable{:}),StepSize{[2,1,3:end]});
-                Grad_Interpolant = cellfun(@(G)griddedInterpolant(GridInGrad,G,'linear','nearest'),cell_Grad,'UniformOutput',false);
-                dCfdZ = arrayfun(@(ii)Grad_Interpolant{ii}(Z),1:NZ,'UniformOutput',true);
-            else
-                dCfdZ=(InterpTable(IndexInTable{1}(2))-InterpTable(IndexInTable{1}(1)))/StepSize{1};
-            end
-            f = Cf*g;
-            dfdq = g*dCfdZ*dZdq + Cf*dgdq;
-            dfds = g*dCfdZ*dZds + Cf*dgds;
-        end
         
         function [f,dfdq,dfds] = Interp_Gradient(GridVector, InterpTable, Z, dZdq, dZds, g, dgdq, dgds)
             [Cf, dCfdZ] = DuctNetwork.InterpolationWithGradient(GridVector, InterpTable, Z);
@@ -3733,6 +3693,14 @@ classdef DuctNetwork < handle
             f = Cf*g;
             dfdq = g*dCfdZ*dZdq + Cf*dgdq;
             dfds = g*dCfdZ*dZds + Cf*dgds;
+        end
+        
+        function [f,dfdq,dfds] = Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1, dZ1dq, dZ1ds,Z2, dZ2dq, dZ2ds, g, dgdq, dgds)
+            [Cf1, dCf1dZ1] = DuctNetwork.InterpolationWithGradient(GridVector1, InterpTable1, Z1);
+            [Cf2, dCf2dZ2] = DuctNetwork.InterpolationWithGradient(GridVector2, InterpTable2, Z2);
+            f = g*Cf1*Cf2;
+            dfdq = g*Cf2*dCf1dZ1*dZ1dq + g*Cf1*dCf2dZ2*dZ2dq + Cf1*Cf2*dgdq;
+            dfds = g*Cf2*dCf1dZ1*dZ1ds + g*Cf1*dCf2dZ2*dZ2ds + Cf1*Cf2*dgds;
         end
         
         function dfdX = Jacobian(f,X0,h)
@@ -3800,67 +3768,5 @@ classdef DuctNetwork < handle
             dCfdZ = cellfun(@(M)M(Index_mid{:}),cell_Grad);
         end
                     
-        function [f,dfdq,dfds] = Double_Interp_Gradient(GridVector1, InterpTable1, GridVector2, InterpTable2, Z1Exp, dZ1dq, dZ1ds,Z2Exp, dZ2dq, dZ2ds, gExp, dgdq, dgds, q,s)
-            % Z = ZExp(q,s) 
-            % C = Interpolation(GridVector,InterpTable,Z) 
-            % g = gExp(q,s) 
-            % f = g*C 
-            % dfdq = g*dCdZ*dZdq + C*dgdq
-            % dfds = g*dCdZ*dZds + C*dgds
-            Coeff_Interpolant1 = griddedInterpolant(GridVector1,InterpTable1,'linear','nearest');
-            Z1 = reshape(Z1Exp(q,s),1,[]);
-            NZ1 = length(Z1);
-            Cf1 = Coeff_Interpolant1(Z1);
-            StepSize1 = cell(1,NZ1);IndexInTable1 = cell(1,NZ1);
-            for ii = 1:NZ1
-                if Z1(ii)>GridVector1{ii}(end)
-                    IndexInTable1{ii}=length(GridVector1{ii})*[1;1];
-                    StepSize1{ii}=1;
-                elseif Z1(ii)<=GridVector1{ii}(1)
-                    IndexInTable1{ii}=[1;1];
-                    StepSize1{ii}=1;
-                else
-                    tmp=find(Z1(ii)>GridVector1{ii},1,'last');
-                    IndexInTable1{ii}=[tmp;tmp+1];
-                    StepSize1{ii}=GridVector1{ii}(tmp+1)-GridVector1{ii}(tmp);
-                end
-            end
-            cell_Grad1 = cell(1,NZ1);
-            [cell_Grad1{:}] = gradient(InterpTable1(IndexInTable1{:}),StepSize1{:});
-            dCf1dZ1 = cellfun(@(M)M(1),cell_Grad1,'UniformOutput',true);
-            dZ1dq = dZ1dq(q,s);
-            dZ1ds = dZ1ds(q,s);
-            
-            Coeff_Interpolant2 = griddedInterpolant(GridVector2,InterpTable2,'linear','nearest');
-            Z2 = reshape(Z2Exp(q,s),1,[]);
-            NZ2 = length(Z2);
-            Cf2 = Coeff_Interpolant2(Z2);
-            StepSize2 = cell(1,NZ2);IndexInTable2 = cell(1,NZ2);
-            for ii = 1:NZ2
-                if Z2(ii)>GridVector2{ii}(end)
-                    IndexInTable2{ii}=length(GridVector2{ii})*[1;1];
-                    StepSize2{ii}=1;
-                elseif Z2(ii)<=GridVector2{ii}(1)
-                    IndexInTable2{ii}=[1;1];
-                    StepSize2{ii}=1;
-                else
-                    tmp=find(Z2(ii)>GridVector2{ii},1,'last');
-                    IndexInTable2{ii}=[tmp;tmp+1];
-                    StepSize2{ii}=GridVector2{ii}(tmp+1)-GridVector2{ii}(tmp);
-                end
-            end
-            cell_Grad2 = cell(1,NZ2);
-            [cell_Grad2{:}] = gradient(InterpTable2(IndexInTable2{:}),StepSize2{:});
-            dCf2dZ2 = cellfun(@(M)M(1),cell_Grad2,'UniformOutput',true);
-            dZ2dq = dZ2dq(q,s);
-            dZ2ds = dZ2ds(q,s);
-            
-            g = gExp(q,s);
-            dgdq = dgdq(q,s);
-            dgds = dgds(q,s);
-            f = g*Cf1*Cf2;
-            dfdq = g*Cf2*dCf1dZ1*dZ1dq + g*Cf1*dCf2dZ2*dZ2dq + Cf1*Cf2*dgdq;
-            dfds = g*Cf2*dCf1dZ1*dZ1ds + g*Cf1*dCf2dZ2*dZ2ds + Cf1*Cf2*dgds;
-        end
     end
 end
