@@ -38,7 +38,7 @@ classdef DuctNetwork < handle
         ob_Uncertainty; % number array of sensor uncertainty, size ob by 1
         proc; % number of procedures in identification experiments
         proc_ConfigIdx; % vector to indicate the configuration ID used in each procedure, size proc by 1
-        proc_ObservationIdx; % cell array of Observation Position vector, size proc by 1
+        proc_ObPosMatrix; % cell array of Observation Position Matrix, size proc by 1, each is matrix of size ob by (n+b)
         proc_Measurements; % number array of Measurements record, size proc by ob
         n_trail;
     end
@@ -364,28 +364,42 @@ classdef DuctNetwork < handle
             %         cnfg_e is the residual of state equations for each configuration
             %         number array of size t by cnfg (folded horizontally) proc_e is the residual of measurements in each procedure
             %         number array of size ob by proc (folded horizontally) dTot_edTot_r
-            if nargout==2
-                cnfg_X = num2cell(Tot_r(1:obj.cnfg*obj.t),1)';
+                cnfg_X = num2cell(reshape(Tot_r(1:obj.cnfg*obj.t),obj.t,obj.cnfg),1)';
                 cnfg_S = repmat({obj.S},obj.cnfg,1);
                 IdentSIdx = obj.s_m>0;
                 for ii = 1:obj.cnfg
                     cnfg_S{ii}(IdentSIdx)=Tot_r(obj.cnfg*obj.t+obj.cnfg_MultiSIdx{ii});
+                    %Each element of cnfg_MultiSIdx contains the idexing of identified parameters in the MultiS vector
                 end
                 
                 [cnfg_e,cnfg_dedX,cnfg_dedS, cnfg_dP, cnfg_dPdX, cnfg_dPdS] = cellfun(@obj.res_StateEquation,cnfg_X,cnfg_S,'UniformOutput',false);
-                
-                cnfg_QP = cellfun(@(X,dP)[obj.U*X, (obj.A')\dP],cnfg_X,cnfg_dP,'UniformOutput',false);
+                cnfg_QP = cellfun(@(X,dP)[obj.U*X; (obj.A')\dP],cnfg_X,cnfg_dP,'UniformOutput',false);
+                proc_mu = cellfun(@mtimes,obj.proc_ObPosMatrix,cnfg_QP(obj.proc_ConfigIdx,:));
+                proc_e = cellfun(@(mu,Z)rdivide(mu-Z,obj.ob_Uncertainty),proc_mu,num2cell(obj.proc_Measurements',1)','UniformOutput',false);
+                Tot_e = cell2mat([cnfg_e;proc_e]);
+                varargout{1} = Tot_e;
+            if nargout>1
                 cnfg_dQPdX = cellfun(@(dPdX)[obj.U;(obj.A')\dPdX],cnfg_dPdX,'UniformOutput',false);
                 cnfg_dQPdS = cellfun(@(dPdS)[zeros(obj.t,obj.s);(obj.A')\dPdS],cnfg_dPdS,'UniformOutput',false);
-                
-                proc_Z = cellfun(@(QP,ObIdx)QP(ObIdx,:),cnfg_QP(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
-                proc_dZdX = cellfun(@(dQPdX,ObIdx)dQPdX(ObIdx,:),cnfg_dQPdX(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
-                proc_dZdS = cellfun(@(dQPdS,ObIdx)dQPdS(ObIdx,:),cnfg_dQPdS(obj.proc_ConfigIdx,:),obj.proc_ObservationIdx);
-                
-                proc_e = cellfun(@(Z,Measurement)(Z-Measurement)./obj.ob_Uncertainty,proc_Z,num2cell(obj.proc_Measurements',1)','UniformOutput',false);
-                
-                Tot_e = [cell2mat(cnfg_e);cell2mat(proc_e)];
-                varargout{1} = Tot_e;
+                proc_dmudX = cellfun(@mtimes,obj.proc_ObPosMatrix,cnfg_dQPdX(obj.proc_ConfigIdx,:));
+                proc_dmudS = cellfun(@mtimes,obj.proc_ObPosMatrix,cnfg_dQPdS(obj.proc_ConfigIdx,:));
+                proc_dedX = cellfun(@(dmudX)rdivide(dmudX,repmat(obj.ob_Uncertainty,1,obj.t)),proc_dmudX,'UniformOutput',false);
+                proc_dedS = cellfun(@(dmudS)rdivide(dmudS,repmat(obj.ob_Uncertainty,1,obj.s)),proc_dmudS,'UniformOutput',false);
+%                 cnfg_dSdMultiS = cellfun(@(MultiSIdx)sparse(IdentSIdx,MultiSIdx,1,obj.s,sum(obj.s_m)),obj.cnfg_MultiSIdx,'UniformOutput',false);
+%                 cnfg_dedMultiS = cellfun(@mtimes,cnfg_dedS,cnfg_dSdMultiS,'UniformOutput',false);
+                dcnfg_edcnfg_X = blkdiag(cnfg_dedX{:});
+                dcnfg_edMultiS = zeros(obj.ob*obj.cnfg,sum(obj.s_m));
+                for ii = 1:obj.cnfg
+                    dcnfg_edMultiS(obj.t*(ii-1)+(1:obj.t),obj.cnfg_MultiSIdx{ii})=cnfg_dedS{ii};
+                end
+                dproc_edcnfg_X = zeros(obj.ob*obj.proc,obj.t*obj.cnfg);
+                dproc_edMultiS = zeros(obj.ob*obj.proc,sum(obj.s_m));
+                for ii = 1:obj.proc
+                    RowIdx = obj.ob*(ii-1)+(1:obj.ob);
+                    dproc_edcnfg_X(RowIdx,obj.cnfg*(obj.proc_ConfigIdx(ii)-1)+(1:obj.t)) = proc_dedX{ii};
+                    dproc_edMultiS(RowIdx,obj.cnfg_MultiSIdx{obj.proc_ConfigIdx(ii)}) = proc_dedS{ii}
+                end
+                dTot_edTot_r = [dcnfg_edcnfg_X,dcnfg_edMultiS;dproc_edcnfg_X,dproc_edMultiS];
                 varargout{2} = dTot_edTot_r;
             end
         end
@@ -546,7 +560,7 @@ classdef DuctNetwork < handle
                 query = {query};
             end
             varargout = cell(1,nargout);
-            [varargout{:}] = DuctNetwork.CircularDarcyWeisbachHaaland(query, varargin{:});
+            [varargout{:}] = DuctNetwork.CircularDarcyWeisbachChurchill(query, varargin{:});
         end
         
         function varargout = CircularDarcyWeisbachHaaland(query, varargin)
@@ -764,7 +778,7 @@ classdef DuctNetwork < handle
                         rho = s(4);
                         e = s(5);
                         nu = s(6);
-                      % Re = abs(V)*Dh/nu;
+                        % Re = abs(V)*Dh/nu;
                         Re = abs(q)*Dh/H/W/nu;
                         
                         lambda = 1/(1+exp(-(Re-3750)/250));
@@ -774,7 +788,7 @@ classdef DuctNetwork < handle
                         T = log10(A+B);
                         Cf_turb = (-0.6*T)^(-2);
                         Cf = (1-lambda)*Cf_lam + lambda*Cf_turb;
-                      % M = L/Dh/2*rho*V*abs(V);
+                        % M = L/Dh/2*rho*V*abs(V);
                         M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
                         dP = Cf*M;
                         varargout{ii}=dP;
@@ -789,26 +803,28 @@ classdef DuctNetwork < handle
                     case 'dPdS'
                         dPdL = dP/L;
                         Kh = 0.625/H-0.25/(H+W);
-                      % dDhdH = Dh*Kh;
-                        dRedH  = Re*Kh-Re/H;
-                        dCf_lamdH = -Cf_lam*(Kh-1/H);
+                        Kh2 = Kh-1/H;
+                        % dDhdH = Dh*Kh;
+                        dRedH  = Re*Kh2;
+                        dCf_lamdH = -Cf_lam*Kh2;
                         dAdH = -3.33*A*Kh;
-                        dBdH = -3*B*(Kh-1/H);
+                        dBdH = -3*B*Kh2;
                         dCf_turbdH = dCf_turbdAB*(dAdH+dBdH);
                         dlambdadH = lambda*(1-lambda)/250*dRedH;
                         dCfdH = (Cf_turb-Cf_lam)*dlambdadH + (1-lambda)*dCf_lamdH + lambda*dCf_turbdH;
-                        dMdH = M*(0.25/(H+W)-2.625/H);
+                        dMdH = M*(2*Kh2-3*Kh);
                         dPdH = dCfdH*M+Cf*dMdH;
                         Kw = 0.625/W-0.25/(H+W);
-                      % dDhdW = Dh*Kw;
-                        dRedW  = Re*Kw-Re/W;
-                        dCf_lamdW = -Cf_lam*(Kw-1/W);
+                        Kw2 = Kw-1/W;
+                        % dDhdW = Dh*Kw;
+                        dRedW  = Re*Kw2;
+                        dCf_lamdW = -Cf_lam*Kw2;
                         dAdW = -3.33*A*Kw;
-                        dBdW = -3*B*(Kw-1/W);
+                        dBdW = -3*B*Kw2;
                         dCf_turbdW = dCf_turbdAB*(dAdW+dBdW);
                         dlambdadW = lambda*(1-lambda)/250*dRedW;
                         dCfdW = (Cf_turb-Cf_lam)*dlambdadW + (1-lambda)*dCf_lamdW + lambda*dCf_turbdW;
-                        dMdW = M*(0.25/(H+W)-2.625/W);
+                        dMdW = M*(2*Kw2-3*Kw);
                         dPdW = dCfdW*M+Cf*dMdW;
                         dPdrho = dP/rho;
                         dCf_turbde = dCf_turbdAB*3.33*A/e;
@@ -862,7 +878,7 @@ classdef DuctNetwork < handle
                         rho = s(4);
                         e = s(5);
                         nu = s(6);
-                      % Re = abs(V)*Dh/nu;
+                        % Re = abs(V)*Dh/nu;
                         Re = abs(q)*Dh/H/W/nu;
                         
                         T1 = power((7/Re),0.9);
@@ -873,7 +889,7 @@ classdef DuctNetwork < handle
                         T4 = power((8/Re),12);
                         T5 = power(A+B,-1.5);
                         Cf = 8*power(T4+T5,1/12);
-                      % M = L/Dh/2*rho*V*abs(V);
+                        % M = L/Dh/2*rho*V*abs(V);
                         M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
                         dP = Cf*M;
                         varargout{ii}=dP;
@@ -888,7 +904,7 @@ classdef DuctNetwork < handle
                     case 'dPdS'
                         dPdL = dP/L;
                         Kh = 0.625/H-0.25/(H+W);
-                      % dDhdH = Dh*Kh;
+                        % dDhdH = Dh*Kh;
                         dRedH  = Re*Kh;
                         dT4dH = -12*T4*Kh;
                         dT2dH = -0.9*T1*Kh+0.27*e/Dh*(0.25/(H+W)-0.625/H);
@@ -899,7 +915,7 @@ classdef DuctNetwork < handle
                         dMdH = M*(0.25/(H+W)-2.625/H);
                         dPdH = dCfdH*M+Cf*dMdH;
                         Kw = 0.625/H-0.25/(H+W);
-                      % dDhdW = Dh*Kw;
+                        % dDhdW = Dh*Kw;
                         dRedW  = Re*Kw;
                         dT4dW = -12*T4*Kw;
                         dT2dW = -0.9*T1*Kw+0.27*e/Dh*(0.25/(H+W)-0.625/W);
