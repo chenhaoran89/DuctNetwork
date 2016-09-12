@@ -1,5 +1,5 @@
 duct = DuctNetwork();
-duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'},[1.204,9e-5,15.11e-6]);
+duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'},[1.204,0.09,15.11e-6]);
 duct.AddBranch(0,1);
 duct.AddFitting(1,'CircularDarcyWeisbach',[4.6,0.3]);%duct1
 duct.AddFitting(1,'ED1_3',[0.3,0.06]);%1
@@ -41,7 +41,7 @@ duct.AddFitting(8,'Louver',-25);%44
 duct.AddBranch(11,12);
 duct.AddFitting(9,'RectangularDarcyWeisbach',[7.6,0.25,0.5]);%duct9
 duct.AddFitting(9,'SR3_1',[0.25,0.5,0.4]);%20
-duct.AddFitting([7,9,8],'RectangularYJunction',[0.25,0.25,0.5,0.25]);%19
+duct.AddFitting([7,9,8],'RectangularTJunction',[0.25,0.25,0.5,0.25]);%19 SR5_13
 duct.AddBranch(9,11);
 duct.AddFitting(10,'RectangularDarcyWeisbach',[13.7,0.25,0.4]);%duct10
 duct.AddFitting(10,'CR9_1',[0.25,0.4,0]);%21
@@ -58,11 +58,11 @@ duct.AddFitting(12,'SR2_5',[0.25,0.25,0.45,0.45,0.6]);%29
 duct.AddBranch(9,10);
 duct.AddFitting(13,'RectangularDarcyWeisbach',[10.7,0.25,0.35]);%duct13
 duct.AddFitting(13,'CR9_1',[0.25,0.35,0]);%30
-duct.AddFitting([11,12,13],'RectangularYJunction',[0.25,0.25,0.25,0.35]);%27 SR5_1
+duct.AddFitting([11,12,13],'RectangularYJunction',[0.25,0.25,0.25,0.35]);%27 SR5_14
 duct.AddBranch(7,9);
 duct.AddFitting(14,'RectangularDarcyWeisbach',[4.6,0.25,0.66]);%duct14
 duct.AddFitting(14,'CR9_1',[0.25,0.66,0]);%31
-duct.AddFitting([14,13,10],'RectangularYJunction',[0.25,0.66,0.35,0.4]);%24
+duct.AddFitting([14,13,10],'RectangularYJunction',[0.25,0.66,0.35,0.4]);%24 SR5_1
 duct.AddBranch(8,0);
 duct.AddFitting(15,'RectangularDarcyWeisbach',[12.2,0.15,0.2]);%duct15
 duct.AddFitting(15,'CR3_1',[0.15,0.2,1.5,90]);%48
@@ -76,25 +76,25 @@ duct.AddFitting(16,'CR9_1',[0.15,0.2,0]);%37
 duct.AddBranch(7,8);
 duct.AddFitting(17,'RectangularDarcyWeisbach',[4.2,0.15,0.25]);%duct17
 duct.AddFitting(17,'CR9_1',[0.15,0.25,0]);%38
-duct.AddFitting([17,15,16],'RectangularYJunction',[0.15,0.25,0.2,0.2]);%35
+duct.AddFitting([17,15,16],'RectangularYJunction',[0.15,0.25,0.2,0.2]);%35 SR5_1
 duct.AddBranch(6,7);
 duct.AddFitting(18,'RectangularDarcyWeisbach',[7,0.25,0.8]);%duct18
 duct.AddFitting(18,'CR6_4',[0.25,0.8,0.025,0]);%39
 duct.AddFitting(18,'SR4_1',[0.25,0.8,0.45,0.45]);%40
 duct.AddFitting(18,'CR3_17',[0.8,0.25,1]);%41
 duct.AddFitting(18,'CR9_6',[0.25,0.8]);%45
-duct.AddFitting([14,18,17],'SR5_13_Junction',[0.25,0.66,0.25,0.8,0.15,0.25]);%35
+duct.AddFitting([14,18,17],'RectangularTJunction',[0.25,0.66,0.25,0.8,0.15,0.25]);%32 SR5_13
 duct.AddBranch(5,6);
 duct.AddFitting(19,'RectangularDarcyWeisbach',[3.7,0.45,0.8]);%duct19
 duct.AddFitting(19,'SR7_17',[0.45,0.3,0.45,0.8,1]);%42
 duct.AddFitting(19,'CR9_4',[0.45,0.8]);%47
 duct.AddFitting(19,'Louver',-15);%46
 duct.AddBranch(4,5);
-duct.AddFitting(20,'FanQuadratic',[5e7,1.9]);%fan
+duct.AddFitting(20,'FanQuadratic',[500,3]);%fan
 %%
 N=1;
 for ii=1:N
     disp(ii)
-    [X,Q,P]=duct.Sim();
+    duct.Sim();
 end
 SuccessRatio=2-duct.n_trail/N
