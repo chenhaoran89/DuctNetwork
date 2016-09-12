@@ -1,5 +1,5 @@
 duct = DuctNetwork();
-duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'},[1.204,0.09,15.11e-6]);
+duct.AddParameter({'Density(kg/m^3)','Roughness(mm)','Kinematic Viscosity(m^2/s)'},[1.204,9e-5,15.11e-6]);
 duct.AddBranch(0,1);
 duct.AddFitting(1,'CircularDarcyWeisbach',[4.6,0.3]);%duct1
 duct.AddFitting(1,'ED1_3',[0.3,0.06]);%1
