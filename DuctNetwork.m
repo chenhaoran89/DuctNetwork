@@ -764,7 +764,7 @@ classdef DuctNetwork < handle
                         rho = s(4);
                         e = s(5);
                         nu = s(6);
-                        % Re = abs(V)*Dh/nu;
+                      % Re = abs(V)*Dh/nu;
                         Re = abs(q)*Dh/H/W/nu;
                         
                         lambda = 1/(1+exp(-(Re-3750)/250));
@@ -774,7 +774,7 @@ classdef DuctNetwork < handle
                         T = log10(A+B);
                         Cf_turb = (-0.6*T)^(-2);
                         Cf = (1-lambda)*Cf_lam + lambda*Cf_turb;
-                        % M = L/Dh/2*rho*V*abs(V);
+                      % M = L/Dh/2*rho*V*abs(V);
                         M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
                         dP = Cf*M;
                         varargout{ii}=dP;
@@ -789,22 +789,22 @@ classdef DuctNetwork < handle
                     case 'dPdS'
                         dPdL = dP/L;
                         Kh = 0.625/H-0.25/(H+W);
-                        % dDhdH = Dh*Kh;
-                        dRedH  = Re*Kh;
-                        dCf_lamdH = -Cf_lam*Kh;
+                      % dDhdH = Dh*Kh;
+                        dRedH  = Re*Kh-Re/H;
+                        dCf_lamdH = -Cf_lam*(Kh-1/H);
                         dAdH = -3.33*A*Kh;
-                        dBdH = -3*B*Kh;
+                        dBdH = -3*B*(Kh-1/H);
                         dCf_turbdH = dCf_turbdAB*(dAdH+dBdH);
                         dlambdadH = lambda*(1-lambda)/250*dRedH;
                         dCfdH = (Cf_turb-Cf_lam)*dlambdadH + (1-lambda)*dCf_lamdH + lambda*dCf_turbdH;
                         dMdH = M*(0.25/(H+W)-2.625/H);
                         dPdH = dCfdH*M+Cf*dMdH;
                         Kw = 0.625/W-0.25/(H+W);
-                        % dDhdW = Dh*Kw;
-                        dRedW  = Re*Kw;
-                        dCf_lamdW = -Cf_lam*Kw;
+                      % dDhdW = Dh*Kw;
+                        dRedW  = Re*Kw-Re/W;
+                        dCf_lamdW = -Cf_lam*(Kw-1/W);
                         dAdW = -3.33*A*Kw;
-                        dBdW = -3*B*Kw;
+                        dBdW = -3*B*(Kw-1/W);
                         dCf_turbdW = dCf_turbdAB*(dAdW+dBdW);
                         dlambdadW = lambda*(1-lambda)/250*dRedW;
                         dCfdW = (Cf_turb-Cf_lam)*dlambdadW + (1-lambda)*dCf_lamdW + lambda*dCf_turbdW;
@@ -862,7 +862,7 @@ classdef DuctNetwork < handle
                         rho = s(4);
                         e = s(5);
                         nu = s(6);
-                        % Re = abs(V)*Dh/nu;
+                      % Re = abs(V)*Dh/nu;
                         Re = abs(q)*Dh/H/W/nu;
                         
                         T1 = power((7/Re),0.9);
@@ -873,7 +873,7 @@ classdef DuctNetwork < handle
                         T4 = power((8/Re),12);
                         T5 = power(A+B,-1.5);
                         Cf = 8*power(T4+T5,1/12);
-                        % M = L/Dh/2*rho*V*abs(V);
+                      % M = L/Dh/2*rho*V*abs(V);
                         M = L*rho*q*abs(q)/Dh/2/H^2/W^2;
                         dP = Cf*M;
                         varargout{ii}=dP;
@@ -888,7 +888,7 @@ classdef DuctNetwork < handle
                     case 'dPdS'
                         dPdL = dP/L;
                         Kh = 0.625/H-0.25/(H+W);
-                        % dDhdH = Dh*Kh;
+                      % dDhdH = Dh*Kh;
                         dRedH  = Re*Kh;
                         dT4dH = -12*T4*Kh;
                         dT2dH = -0.9*T1*Kh+0.27*e/Dh*(0.25/(H+W)-0.625/H);
@@ -899,7 +899,7 @@ classdef DuctNetwork < handle
                         dMdH = M*(0.25/(H+W)-2.625/H);
                         dPdH = dCfdH*M+Cf*dMdH;
                         Kw = 0.625/H-0.25/(H+W);
-                        % dDhdW = Dh*Kw;
+                      % dDhdW = Dh*Kw;
                         dRedW  = Re*Kw;
                         dT4dW = -12*T4*Kw;
                         dT2dW = -0.9*T1*Kw+0.27*e/Dh*(0.25/(H+W)-0.625/W);
