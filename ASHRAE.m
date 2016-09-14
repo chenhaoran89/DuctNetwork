@@ -41,7 +41,7 @@ duct.AddFitting(8,'Louver',-25);%44
 duct.AddBranch(11,12);
 duct.AddFitting(9,'RectangularDarcyWeisbach',[7.6,0.25,0.5]);%duct9
 duct.AddFitting(9,'SR3_1',[0.25,0.5,0.4]);%20
-duct.AddFitting([7,9,8],'RectangularTJunction',[0.25,0.25,0.5,0.25]);%19 SR5_13
+duct.AddFitting([7,9,8],'RectangularTJunction',[0.25,0.25,0.25,0.5,0.25,0.25]);%19 SR5_13
 duct.AddBranch(9,11);
 duct.AddFitting(10,'RectangularDarcyWeisbach',[13.7,0.25,0.4]);%duct10
 duct.AddFitting(10,'CR9_1',[0.25,0.4,0]);%21
@@ -90,11 +90,14 @@ duct.AddFitting(19,'SR7_17',[0.45,0.3,0.45,0.8,1]);%42
 duct.AddFitting(19,'CR9_4',[0.45,0.8]);%47
 duct.AddFitting(19,'Louver',-15);%46
 duct.AddBranch(4,5);
-duct.AddFitting(20,'FanQuadratic',[500,3]);%fan
+duct.AddFitting(20,'FanQuadratic',[1e8,1.9]);%fan
 %%
 N=1;
 for ii=1:N
     disp(ii)
+    duct.X = duct.U'*[700;250;950;950;950;1900;275;275;550;550;475;475;950;1500;200;200;400;1900;1900;1900]/1000;
+%     duct.SetFlowLimit(zeros(20,1),1.9*ones(20,1));
     duct.Sim();
 end
-SuccessRatio=2-duct.n_trail/N
+SuccessRatio=2-duct.n_trail/N;
+duct.Q

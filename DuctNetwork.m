@@ -13,6 +13,9 @@ classdef DuctNetwork < handle
         % A(i,j)==-1 means branch j enters node i
         t; % dimension of null space
         U; % null space basis of matrix A, of size b by t, AU=0, U'U=1
+        X; % internal state of duct system, of size t by 1
+        X_lb; % lower boundary of possible internal state in simulation
+        X_ub; % upper boundary of possible internal state in simulation
         b_Pdrop; % cell array of size b by 1 for the pressure drop in terms of q and s
         % if there exist multiple Pdrop functions, use a cell array to store
         % each of them only record the original Pdrop function for the
@@ -54,6 +57,9 @@ classdef DuctNetwork < handle
             obj.A = zeros(0,0);
             obj.t = 0;
             obj.U = zeros(0,0);
+            obj.X = [];
+            obj.X_ub = [];
+            obj.X_lb = [];
             obj.b_Pdrop = cell(0,1);
             obj.b_dPdQ = cell(0,1);
             obj.b_dPdS = cell(0,1);
@@ -217,6 +223,16 @@ classdef DuctNetwork < handle
             end
         end
         
+        function varargout = SetFlowLimit(obj, q_lb, q_ub)
+            x1 = obj.U'*q_lb;
+            x2 = obj.U'*q_ub;
+            obj.X_ub = x1.*(x1>x2)+x2.*(x2>x1);
+            obj.X_lb = x1.*(x1<x2)+x2.*(x2<x1);
+            if nargout>0
+                varargout{1} = [obj.X_lb;obj.X_ub];
+            end
+        end
+        
         function varargout = BranchPressureDrop(obj, Branch_Idx, X, S) % [dP, dPdX, dPdS]
             N = length(obj.b_FittingDescription{Branch_Idx});
             q = obj.U*X;
@@ -290,12 +306,17 @@ classdef DuctNetwork < handle
             elseif nargout==2
                 [dP, dPdX]=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,X,S),(1:obj.b)','UniformOutput',false);
                 dP = cell2mat(dP); dPdX = cell2mat(dPdX);
-                e = obj.U'*dP; dedX = obj.U'*dPdX; varargout={e,dedX};
+                e = obj.U'*dP; dedX = obj.U'*dPdX; 
+                varargout={e,dedX};
             elseif nargout==1
                 dP=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,X,S),(1:obj.b)','UniformOutput',false);
                 dP = cell2mat(dP);
-                e = obj.U'*dP; varargout={e};
+                e = obj.U'*dP; 
+                varargout={e};
             end
+%             if any(isnan(varargout{1}))
+%                 varargout{:}
+%             end
         end
         
         function [X, Q, P] = Sim(obj, Param_Value, Param_Idx)
@@ -316,16 +337,28 @@ classdef DuctNetwork < handle
                 'SpecifyObjectiveGradient',true,'CheckGradients',false,...
                 'FiniteDifferenceType','central','FiniteDifferenceStepSize',1e-10);
             exitflag = -1;resnorm=10;
-            X0 = ones(obj.t,1);
+            if isempty(obj.X)
+                X0 = ones(obj.t,1);
+            else
+                X0 = obj.X;
+            end
             % optimoptions(options,'SpecifyObjectiveGradient',false);
             while ~(exitflag>0 && resnorm<1e-4)
                 obj.n_trail = obj.n_trail+1;
-                [X,resnorm,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,[],[],options);
+                [X,resnorm,~,exitflag] = lsqnonlin(@(x) obj.res_StateEquation(x,S_value),X0,obj.X_lb,obj.X_ub,options);
                 X0 = randn(obj.t,1);
-%                 options = optimoptions(options,'SpecifyObjectiveGradient',false);
+                if ~isempty(obj.X_lb) && ~isempty(obj.X_ub) && any([X0<obj.X_lb;X0>obj.X_ub])
+                    X0 = obj.X_ub + rand(obj.t,1).*(obj.X_ub-obj.X_lb);
+                elseif ~isempty(obj.X_lb) && any(X0<obj.X_lb)
+                    X0 = obj.X_lb + rand(obj.t,1);
+                elseif ~isempty(obj.X_ub) && any(X0>obj.X_ub)
+                    X0 = obj.X_ub - rand(obj.t,1);
+                end
+                options = optimoptions(options,'SpecifyObjectiveGradient',false);
             end
             dP=arrayfun(@(Branch_idx)obj.BranchPressureDrop(Branch_idx,X,S_value),(1:obj.b)','UniformOutput',false);
             dP=cell2mat(dP);
+            obj.X = X;
             Q = obj.U*X;
             P = (obj.A*obj.A')\obj.A*dP;
             obj.Q = Q;
@@ -3538,7 +3571,7 @@ classdef DuctNetwork < handle
         function [dP, dPdQ, dPdS]=ER5_3(q, s, Selection)
             % q=[qs,qb,qc];
             % s=[Hs,Ws,Hb,Wb,rho];
-            ModifiedTable = 0;
+            ModifiedTable = 1;
             if (ModifiedTable == 1)
                 gExp =  0.5*s(5)*(q(3)/(s(1)*s(2)))^2;
                 dgdq =  [0,0,s(5)*q(3)/(s(1)*s(2))^2];
@@ -3605,7 +3638,7 @@ classdef DuctNetwork < handle
         function [dP, dPdQ, dPdS]=ER5_5(q, s, Selection)
             % q=[qb1,qb2,qc];
             % s=[H,Wb1,Wb2,Wc,rho];
-            ModifiedTable = 0;
+            ModifiedTable = 1;
             if (ModifiedTable == 1)
                 gExp =  0.5*s(5)*(q(3)/(s(1)*s(4)))^2;
                 dgdq =  [0,0,s(5)*q(3)/(s(1)*s(4))^2];
@@ -3812,7 +3845,7 @@ classdef DuctNetwork < handle
         function [dP, dPdQ, dPdS]=SR5_15(q, s, Selection)
             % q=[qb1,qb2,qc];
             % s=[H,Wb1,Wb2,Wc,rho];
-            ModifiedTable = 0;
+            ModifiedTable = 1;
             if (ModifiedTable == 1)
                 gExp =  0.5*s(5)*(q(3)/(s(1)*s(4)))^2;
                 dgdq =  [0,0,s(5)*q(3)/(s(1)*s(4))^2];
