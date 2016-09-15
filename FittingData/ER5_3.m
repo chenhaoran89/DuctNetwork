@@ -1,6 +1,6 @@
 function [dP, dPdQ, dPdS]=ER5_3(q, s, Selection)
-% q=[qs,qb,qc];
-% s=[Hs,Ws,Hb,Wb,rho];
+% q = [Qs,Qb,Qc];
+% s = [Hs,Ws,Hb,Wb,rho];
 ModifiedTable = 0;
 if (ModifiedTable == 1)
     gExp =  0.5*s(5)*(q(3)/(s(1)*s(2)))^2;
